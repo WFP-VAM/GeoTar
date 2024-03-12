@@ -196,7 +196,12 @@ bbox
 # ## Fetch NDVI dekadal data for the period and pilot of interest
 
 
-def fetch_ndvi():
+def Process_ndvi():
+    """
+    Fetches and computes the NDVI for the specified period.
+    Returns:
+    - Raster file with mean NDVI for the selected period.
+    """
     NDVI = hdc_stac_client.search(bbox=bbox,
                                   # collections=["mod13q1_vim_native"],
                                   collections=["mxd13q1_vim_dekad"],
@@ -273,6 +278,12 @@ def fetch_ndvi():
 # ## Fetch the dekadal NDVI anomaly data from HDC
 
 def process_ndvi_anomaly():
+    """
+        Fetches and computes the NDVI anomaly for the specified period.
+        Returns:
+         - raster file with the mean NDVI anomaly for the period selected.
+         - raster file with the maximum NDVI anomaly for the period selected.
+        """
     #lt_dates = "2002-07-01/2018-07-01"
     query_ndvi_anom = hdc_stac_client.search(bbox=bbox,
     #collections=["mod13q1_vim_native"],
@@ -831,165 +842,6 @@ def process_LST_anomaly():
         # write the data to a geotiff file
         da.rio.to_raster(filename, driver='GTiff')
         print(f'{filename} saved successfully')
-
-
-# # Old solution
-# 
-# Results of the computed anomaly are strange, apparently ArcGIS is loading values from the replaced/deleted files
-
-# Fetch the long term NDVI data for the area of interest
-
-# In[ ]:
-
-
-lt_dates = "2002-07-01/2018-07-01"
-query_ndvi_lt = hdc_stac_client.search(bbox=bbox,
-    #collections=["mod13q1_vim_native"],
-    collections=["mxd13q1_vim_dekad"], #mxd13a2_vim_dekad_lta
-    datetime= lt_dates).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
-
-ndvi_lt = stac_load(query_ndvi_lt, patch_url=signer, output_crs='EPSG:4326', resolution= res, bbox=bbox)
-ndvi_lt
-
-
-# Compute the NDVI average for each month along the entire time-series
-
-# Aggregate the dekadal NDVI long term average by month
-
-# In[ ]:
-
-
-m_ndvi_lta = ndvi_lt.groupby('time.month').mean('time')
-m_ndvi_lta = m_ndvi_lta * 0.0001
-m_ndvi_lta
-
-
-# Calculate the anomaly by month
-
-# In[ ]:
-
-
-ndvi_an_m = (m_ndvi - m_ndvi_lta)
-ndvi_an_m = (m_ndvi - m_ndvi_lta)/m_ndvi_lta
-ndvi_an_m
-
-
-# Compare the dimesions of NDVI time series dataset and the dimensions of the NDVI long term average. The dimension should be identical when computing the anomaly.
-
-# In[ ]:
-
-
-print(ndvi_m.dims)
-print(ndvi_lta.dims)
-
-
-# In[ ]:
-
-
-dekad = 0
-current_data = m_ndvi_lta.band[dekad, :, :]
-current_data.plot(cmap='winter', figsize=[5,5])
-
-data = m_ndvi.band[dekad, :, :]
-data.plot(cmap='winter', figsize=[5,5])
-
-data = ndvi_anomaly.band[dekad, :, :]
-data.plot(cmap='winter', figsize=[5,5])
-
-
-# In[ ]:
-
-
-def compute_ndvi_anomaly(ndvi_stack, img_ndvi_lta, dekads, year):
-    """
-    Computes the NDVI anomaly for the specified dekads.
-
-    Parameters:
-    ndvi_stack (xarray.DataArray): The NDVI stack.
-    img_ndvi_lta (xarray.DataArray): The long-term average NDVI image.
-    dekads (list): A list of integers representing the dekads to compute the anomaly for.
-
-    Returns:
-    anomalies (xarray.DataArray): An xarray DataArray containing the NDVI anomalies for each specified dekad.
-    """
-    # Compute the anomalies for each specified dekad
-    anomalies = []
-    for dekad in dekads:
-        # Select the NDVI values for the specified year and dekad from both datasets
-        year = ndvi_stack.time.dt.year[0]
-        ndvi_year_dekad = ndvi_stack.sel(time=f'{year}-01-01T00:00:00', method='nearest').isel(time=(dekad-1)*3)
-        ndvi_lta_year_dekad = img_ndvi_lta.sel(time=f'1970-01-01T00:00:00', method='nearest').isel(time=dekad-1)
-
-        # Compute the dekad NDVI anomaly
-        anomaly = (ndvi_year_dekad - ndvi_lta_year_dekad) / ndvi_lta_year_dekad
-
-        # Add the anomaly to the list
-        anomalies.append(anomaly)
-
-    # Convert the list of anomalies into an xarray DataArray
-    anomalies = xr.concat(anomalies, dim='dekad')
-
-    return anomalies
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-# Compute the mean of all pixels
-ndvi_lta_mean = m_ndvi_lta_r.mean(dim=["latitude", "longitude"])
-
-# Plot the time series of the mean NDVI anomaly
-fig, ax = plt.subplots()
-ndvi_lta_mean.band.plot(ax=ax)
-ax.set_ylabel('Mean NDVI anomaly')
-ax.set_xlabel('Time')
-
-
-
-
-
-# In[ ]:
-
-
-import sys
-def sizeof_fmt(num, suffix='B'):
-    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
-    for unit in ['','K','M','G','T','P','E','Z']:
-        if abs(num) < 1024.0:
-            return "%3.1f %s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f %s%s" % (num, 'Yi', suffix)
-
-for name, size in sorted(((name, sys.getsizeof(value)) for name, value in list(
-                          locals().items())), key= lambda x: -x[1])[:10]:
-    print("{:>30}: {:>8}".format(name, sizeof_fmt(size)))
-
-
-# ## Save and load xarrays 
-
-# In[ ]:
-
-
-output_zarr = f"C:/Geotar/{pilot_name}/geodata/workspace/nvdi.zarr"
-m_ndvi_lta.to_zarr(output_zarr)
-print(f'zarr file saved on {output_zarr}')
-
-
-# In[ ]:
-
-
-x= xr.open_zarr(f'C:/Geotar/{pilot_name}/geodata/workspace/nvdi.zarr')
-x
-
-
-# In[ ]:
-
 
 
 
