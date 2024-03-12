@@ -196,6 +196,80 @@ bbox
 # ## Fetch NDVI dekadal data for the period and pilot of interest
 
 
+def fetch_ndvi():
+    NDVI = hdc_stac_client.search(bbox=bbox,
+                                  # collections=["mod13q1_vim_native"],
+                                  collections=["mxd13q1_vim_dekad"],
+                                  datetime=period,  # emulates the period of data cube files
+                                  ).get_all_items()
+
+    res = 0.0022457882102988 # 250 or 0.01 for 1km
+    ndvi_stack = stac_load(NDVI,  output_crs='EPSG:4326', resolution= res, patch_url=signer, bbox=bbox)
+    ndvi_stack
+    # Aggregate the dekadal NDVI by month
+    m_ndvi = ndvi_stack.groupby('time.month').mean('time')
+    m_ndvi = m_ndvi * 0.0001
+    m_ndvi
+
+    # Mask out extreme values
+    m_ndvi = xr.where(m_ndvi < -1, np.nan, m_ndvi)
+    m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
+    m_ndvi
+
+    #Aggregate the data by season
+    ndvi_m_s = m_ndvi.mean(dim=["month"])
+    ndvi_m_s
+
+    output_dir_s = f"C:/Geotar/{pilot_name}/geodata/Processed/vegetation/season"
+    filename_m_s = f'{output_dir_s}/ndvi_m_s.tif'
+    if not os.path.exists(output_dir_s):
+    os.makedirs(output_dir_s)
+
+    # write the data to a geotiff file
+    #ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff')
+    print(f"{filename_m_s} saved successfully")
+
+    # Mask NDVI using land cover
+    tiff_path = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
+    mask_array = rioxarray.open_rasterio(tiff_path)
+    mask_array = mask_array.squeeze("band", drop=True)
+    mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
+    mask_array
+    mask_array = mask_array.transpose('latitude', 'longitude')
+    mask_array
+    latitude = ndvi_m_s['latitude'].values
+    longitude = ndvi_m_s['longitude'].values
+    # Convert mask_array to an xarray DataArray
+    mask_dataarray = xr.DataArray(mask_array, coords={'latitude': latitude, 'longitude': longitude}, dims=['latitude', 'longitude'])
+    xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
+    # Create a mask where conditions are not met and set to 0 where conditions are met
+    ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
+    ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
+    ndvi_masked
+
+    # save the masked ndvi data
+    ndvi_masked.rio.to_raster(f'{output_dir_s}/ndvi_m_s.tif', driver='GTiff')
+
+    # Save the monthly ndvi files
+
+    # create a directory to store the geotiff files
+    # output_dir = f"C:/Geotar/{pilot_name}/geodata/Processed/Vegetation"
+    if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+    # loop over all timesteps in the dataset
+    for i in range(len(m_ndvi.month)):
+        # extract a single timestep as a DataArray
+        image_ndvi = m_ndvi.isel(month=i)
+        # create a file path for the geotiff file
+        filename = f'{output_dir}/ndvi_{m_ndvi.month.values[i]}.tif'
+
+        # write the data to a geotiff file
+        image_ndvi.rio.to_raster(filename, driver='GTiff')
+        print(f"{filename} saved successfully")
+    return()
+
+
 # ## Fetch the dekadal NDVI anomaly data from HDC
 
 # In[ ]:
@@ -206,6 +280,10 @@ query_ndvi_anom = hdc_stac_client.search(bbox=bbox,
     #collections=["mod13q1_vim_native"],
     collections=["mxd13q1_viq_dekad"], #mxd13a2_vim_dekad_lta
     datetime= period).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
+
+
+# In[ ]:
+
 
 res = 0.0022457882102988 # 250 or 0.01 for 1km
 ndvi_anom = stac_load(query_ndvi_anom, patch_url=signer, output_crs='EPSG:4326', resolution= res, bbox=bbox, chunks ={})
