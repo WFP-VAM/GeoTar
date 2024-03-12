@@ -26,8 +26,6 @@ import shutil
 
 # Now we need to configure and start a session in the HDC, to do this, we need to log-in using a token
 
-# In[ ]:
-
 
 root = pathlib.Path().resolve().parent.parent
 root
@@ -82,9 +80,6 @@ def _get_hdc_stac_param_from_env():
 #
 
 hdc_stac_client, signer = _get_hdc_stac_param_from_env() 
-
-
-# In[ ]:
 
 
 # Ask the user to select an option
@@ -190,14 +185,6 @@ elif pilot == "10":
 
 # The next step is to get the NDVI data from the data cube, to do so, we need to define the bounding box of the pilot area of interest
 
-# In[ ]:
-
-
-# Load the shapefiles
-#Chad_shp = root/"CHAD/Geodata/Raw/Boundaries/Villages_area.shp"
-#Dahuk_shp = root/"IRAQ/Geodata/Iraq_project/Dahuk_mask.shp"
-#Najaf_shp = root/"IRAQ/Geodata/Iraq_project/Najaf_mask.shp"
-#Col_shp = root/"COL/Geodata/"
 
 area_shp = gpd.read_file(mask_shp)
 
@@ -206,191 +193,7 @@ bbox = area_shp.total_bounds
 bbox
 
 
-# View the location of the bounding box 
-
-# In[ ]:
-
-
-# Define the center of the map
-center = [(bbox[1]+bbox[3])/2, (bbox[0]+bbox[2])/2]
-# Create a map centered at the center point of the polygon
-m = folium.Map(location=center, zoom_start=4)
-
-# Add a polygon to the map
-folium.Polygon(
-    [
-        [bbox[1], bbox[0]],
-        [bbox[1], bbox[2]],
-        [bbox[3], bbox[2]],
-        [bbox[3], bbox[0]],
-        [bbox[1], bbox[0]],
-    ],
-    color='red',
-    fill_color='',
-    fill_opacity=0.2
-).add_to(m)
-
-# Display the map
-m
-
-
 # ## Fetch NDVI dekadal data for the period and pilot of interest
-
-# In[ ]:
-
-
-get_ipython().run_cell_magic('time', '', 'NDVI = hdc_stac_client.search(bbox=bbox,\n    #collections=["mod13q1_vim_native"],\n    collections=["mxd13q1_vim_dekad"],\n    datetime=period, #emulates the period of data cube files\n).get_all_items()\n\nres = 0.0022457882102988 # 250 or 0.01 for 1km\nndvi_stack = stac_load(NDVI,  output_crs=\'EPSG:4326\', resolution= res, patch_url=signer, bbox=bbox)\n#\n#ndvi_stack = stac_load(NDVI,  patch_url=signer, bbox=bbox)\nndvi_stack\n')
-
-
-# In[ ]:
-
-
-# create a directory to store the geotiff files
-output_dir_zarr = f"C:/Geotar/{pilot_name}/geodata/zarr"
-if not os.path.exists(output_dir_zarr):
-    os.makedirs(output_dir_zarr)
-outfile_zarr = output_dir_zarr + "/ndvi_stac.zarr"
-# Delete the existing Zarr store if it exists
-if os.path.exists(outfile_zarr):
-    shutil.rmtree(outfile_zarr)
-print(f'path to zarr file: {outfile_zarr}')
-
-
-# save the zarr file to disk
-
-# In[ ]:
-
-
-# save zarr file
-ndvi_stack.to_zarr(outfile_zarr)
-print(f"{outfile_zarr} saved")
-
-Open the ndvi dekadal from zarr file (optional)
-# In[ ]:
-
-
-# output_dir_zarr = f"C:/Geotar/{pilot_name}/geodata/zarr"
-# outfile_zarr = output_dir_zarr + "/ndvi_stac.zarr"
-# #Load zarr file containing NDVI dekadal data for the season
-# ndvi_stack = xr.open_zarr(outfile_zarr)
-# ndvi_stack
-
-
-# Aggregate the dekadal NDVI by month
-
-# In[ ]:
-
-
-#m_ndvi = ndvi_stack.resample(time='1M').mean('time')
-m_ndvi = ndvi_stack.groupby('time.month').mean('time')
-m_ndvi = m_ndvi * 0.0001
-m_ndvi
-
-
-# Mask out extreme values
-
-# In[ ]:
-
-
-m_ndvi = xr.where(m_ndvi < -1, np.nan, m_ndvi)
-m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
-m_ndvi
-
-
-# In[ ]:
-
-
-#Aggregate the data by season
-ndvi_m_s = m_ndvi.mean(dim=["month"])
-ndvi_m_s
-
-output_dir_s = f"C:/Geotar/{pilot_name}/geodata/Processed/vegetation/season"
-filename_m_s = f'{output_dir_s}/ndvi_m_s.tif'
-if not os.path.exists(output_dir_s):
-    os.makedirs(output_dir_s)
-
-# write the data to a geotiff file
-#ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff')
-print(f"{filename_m_s} saved successfully")
-
-
-# Mask NDVI using land cover 
-
-# In[ ]:
-
-
-tiff_path = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
-
-
-# In[ ]:
-
-
-mask_array = rioxarray.open_rasterio(tiff_path)
-#mask_array = mask_array.isel(band=0)
-mask_array = mask_array.squeeze("band", drop=True)
-mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
-mask_array
-
-
-# In[ ]:
-
-
-mask_array = mask_array.transpose('latitude', 'longitude')
-mask_array
-
-
-# In[ ]:
-
-
-latitude = ndvi_m_s['latitude'].values
-longitude = ndvi_m_s['longitude'].values
-# Convert mask_array to an xarray DataArray
-mask_dataarray = xr.DataArray(mask_array, coords={'latitude': latitude, 'longitude': longitude}, dims=['latitude', 'longitude'])
-
-
-# In[ ]:
-
-
-xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
-
-
-# In[ ]:
-
-
-# Create a mask where conditions are not met and set to 0 where conditions are met
-ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
-ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
-ndvi_masked
-
-
-# In[ ]:
-
-
-# save the masked ndvi data
-
-ndvi_masked.rio.to_raster(f'{output_dir_s}/ndvi_m_s.tif', driver='GTiff')
-
-
-# Save the monthly ndvi files
-
-# In[ ]:
-
-
-# create a directory to store the geotiff files
-output_dir = f"C:/Geotar/{pilot_name}/geodata/Processed/Vegetation"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-# loop over all timesteps in the dataset
-for i in range(len(m_ndvi.month)):
-    # extract a single timestep as a DataArray
-    image_ndvi = m_ndvi.isel(month=i)
-    # create a file path for the geotiff file
-    filename = f'{output_dir}/ndvi_{m_ndvi.month.values[i]}.tif'
-
-    # write the data to a geotiff file
-    image_ndvi.rio.to_raster(filename, driver='GTiff')
-    print(f"{filename} saved successfully")
 
 
 # ## Fetch the dekadal NDVI anomaly data from HDC
@@ -403,10 +206,6 @@ query_ndvi_anom = hdc_stac_client.search(bbox=bbox,
     #collections=["mod13q1_vim_native"],
     collections=["mxd13q1_viq_dekad"], #mxd13a2_vim_dekad_lta
     datetime= period).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
-
-
-# In[ ]:
-
 
 res = 0.0022457882102988 # 250 or 0.01 for 1km
 ndvi_anom = stac_load(query_ndvi_anom, patch_url=signer, output_crs='EPSG:4326', resolution= res, bbox=bbox, chunks ={})
