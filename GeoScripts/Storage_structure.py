@@ -62,3 +62,4 @@ def stodarage_sctructure(iso3):
                             print(f"Creation of the folder {subfolder} under {data_path} failed: {error}")
                     else:
                         print(f"Folder {subfolder} under {geodata_path} already exists.")
+    return()
