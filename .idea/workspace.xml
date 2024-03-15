@@ -4,7 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5c509fae-c3cd-4f6a-98ef-c6fde9b1199b" name="Changes" comment="Function select pilot with dict object" />
+    <list default="true" id="5c509fae-c3cd-4f6a-98ef-c6fde9b1199b" name="Changes" comment="Function select pilot with dict object">
+      <change afterPath="$PROJECT_DIR$/GeoScripts/Raster_Aggregation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/GeoScripts/World_cover.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/GeoScripts/prox_GDAL.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Notebooks/prox_GDAL.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Notebooks/prox_GDAL.ipynb" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -62,6 +68,8 @@
       <recent name="C:\Users\oscar.bautista\OneDrive - World Food Programme\GLOBAL\Notebooks\GeoTar\GeoTar_py" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\oscar.bautista\OneDrive - World Food Programme\GLOBAL\Notebooks\GeoTar\GeoScripts" />
+      <recent name="C:\Users\oscar.bautista\OneDrive - World Food Programme\GLOBAL\Notebooks\GeoTar\Notebooks" />
       <recent name="C:\Users\oscar.bautista\OneDrive - World Food Programme\GLOBAL\Notebooks\GeoTar\GeoTar_py" />
     </key>
   </component>
