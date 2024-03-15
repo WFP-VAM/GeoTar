@@ -55,61 +55,73 @@ else:
 
 # Check the user"s selection and print a message
 if pilot == "1" and p_data == "1":
-    pilot_nam = "col"
+    pilot_nam = "COL"
     input_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Education/Education_facilities.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist_"+ out_name + ".tif"
+    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/{pilot_nam}_mask.shp"
     print(f"You selected {pilot_nam} Education facilities.")
 elif pilot == "1" and p_data == "2":
+    pilot_nam = "COL"
     input_shp = f"C:/Geotar/{pilot_nam}/geodata/Raw/Health/Colombia-node.shp"
     mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/COL_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Healthcare facilities.")
 elif pilot == "1" and p_data == "3":
+    pilot_nam = "COL"
     input_shp = ""
     mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/COL_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Roads.")
 elif pilot == "2" and p_data == "1":
+    pilot_nam = "CHAD"
     input_shp = "zip://C:/Geotar/CHAD/geodata/Processed/Education/hotosm_chad_education_facilities_points_shp.zip/hotosm_chad_education_facilities_points.shp"
     mask_shp = "C:/Geotar/CHAD/geodata/Processed/Mask/Chad_mask.shp"
     output = f"C:/Geotar/CHAD/geodata/Processed/{res_folder}/dist"+ out_name+ ".tif"
     print("You selected CHAD Education facilities.")
 elif pilot == "2" and p_data == "2":
+    pilot_nam = "CHAD"
     input_shp = "C:/Geotar/CHAD/geodata/Processed/Health/Chad_Health_facilities.shp"
     mask_shp = "C:/Geotar/CHAD/geodata/Processed/Mask/Chad_mask.shp"
     output = f"C:/Geotar/CHAD/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected CHAD Healthcare facilities.")
 elif pilot == "2" and p_data == "3":
+    pilot_nam = "CHAD"
     input_shp = "zip://C:/Geotar/CHAD/geodata/Raw/Roads/tcd_trs_roads_ocha.zip/tcd_trs_roads_ocha/tcd_trs_roads_ocha.shp"
     mask_shp = "C:/Geotar/CHAD/geodata/Processed/Mask/Chad_mask.shp"
     output = f"C:/Geotar/CHAD/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected CHAD Roads.")
 elif pilot == "3" and p_data == "1":
+    pilot_nam = "IRAQ_D"
     input_shp = "zip://C:/Geotar/IRAQ_D/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
     mask_shp = "C:/Geotar/IRAQ_D/geodata/Processed/Mask/Dahuk_mask.shp"
     output = f"C:/Geotar/IRAQ_D/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected IRAQ Dahuk Education facilities.")
 elif pilot == "3" and p_data == "2":
+    pilot_nam = "IRAQ_D"
     input_shp = "zip://C:/Geotar/IRAQ_D/geodata/Raw/Health/iraq-shapefiles.zip/shapefiles/healthsites.shp"
     mask_shp = "C:/Geotar/IRAQ_D/geodata/Processed/Mask/Dahuk_mask.shp"
     output = f"C:/Geotar/IRAQ_D/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected IRAQ Dahuk Healthcare facilities.")
 elif pilot == "3" and p_data == "3":
+    pilot_nam = "IRAQ_D"
     input_shp = ""
     mask_shp = "C:/Geotar/IRAQ_D/geodata/Processed/Mask/Dahuk_mask.shp"
     output = f"C:/Geotar/IRAQ_D/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected IRAQ Dahuk Roads.")
 elif pilot == "4" and p_data == "1":
+    pilot_nam = "IRAQ_N"
     input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
     mask_shp = "C:/Geotar/IRAQ_N/geodata/Processed/Mask/Najaf_mask.shp"
     output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected IRAQ Najaf Education facilities.")
 elif pilot == "4" and p_data == "2":
+    pilot_nam = "IRAQ_N"
     input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Health/iraq-shapefiles.zip/shapefiles/healthsites.shp"
     mask_shp = "C:/Geotar/IRAQ_N/geodata/Processed/Mask/Najaf_mask.shp"
     output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print("You selected IRAQ Najaf Healthcare facilities.")
 elif pilot == "4" and p_data == "3":
+    pilot_nam = "IRAQ_N"
     input_shp = ""
     mask_shp = "C:/Geotar/IRAQ_N/geodata/Processed/Mask/Najaf_mask.shp"
     output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
@@ -117,25 +129,25 @@ elif pilot == "4" and p_data == "3":
 elif pilot == "5" and p_data == "1":
     pilot_nam = "IRAQ"
     input_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Education/education.shp"
-    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/Iraq_mask.shp"
+    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/{pilot_nam}_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Education facilities.")
 elif pilot == "5" and p_data == "2":
     pilot_nam = "IRAQ"
     input_shp = "zip://C:/Geotar/IRAQ/geodata/Raw/Health/iraq-shapefiles.zip/shapefiles/healthsites.shp"
-    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/Iraq_mask.shp"
+    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/{pilot_nam}_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Healthcare facilities.")
 elif pilot == "5" and p_data == "3":
     pilot_nam = "IRAQ"
     input_shp = "zip://C:/Geotar/IRAQ/geodata/Raw/Roads/irq_roads.zip/IRQ_roads.shp"
-    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/Iraq_mask.shp"
+    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/{pilot_nam}_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Roads.")
 elif pilot == "6" and p_data == "1":
     pilot_nam = "LBN"
     input_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Education/education.shp"
-    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/LBY_mask.shp"
+    mask_shp = f"C:/Geotar/{pilot_nam}/geodata/Processed/Mask/{pilot_nam}_mask.shp"
     output = f"C:/Geotar/{pilot_nam}/geodata/Processed/{res_folder}/dist_"+ out_name+ ".tif"
     print(f"You selected {pilot_nam} Education facilities.")
 elif pilot == "6" and p_data == "2":
@@ -229,8 +241,9 @@ def proximity_rasters():
 
     # check if the output file already exists, and delete it if it does
     if os.path.exists(dst_filename):
+        print(f'{dst_filename} exists, deleting...')
         drv = gdal.GetDriverByName('GTiff')
-        drv.Delete(output_file)
+        drv.Delete(dst_filename)
 
     # rasterize the vectori file with the spatial resolution defined
     ds = gdal.Rasterize(dst_filename, clipped_shape, xRes=pixel_size, yRes=pixel_size,
@@ -247,6 +260,7 @@ def proximity_rasters():
 
     # check if the output file already exists, and delete it if it does
     if os.path.exists(output):
+        print(f'{output} exists, deleting...')
         drv = gdal.GetDriverByName('GTiff')
         drv.Delete(dst_filename)
 
@@ -268,7 +282,7 @@ def proximity_rasters():
     # Compute the proximity of the input raster values to the raster value of 1
     # and write the resulting distances to the output raster file
     prox = gdal.ComputeProximity(srcband, dstband, ["VALUES=1", "DISTUNITS=GEO"])
-
+    print(f'{output} file processed')
     # close the input and output raster files and bands to free up memory
     srcband = None
     dstband = None
