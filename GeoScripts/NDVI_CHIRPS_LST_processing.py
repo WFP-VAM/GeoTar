@@ -30,10 +30,6 @@ import shutil
 root = pathlib.Path().resolve().parent.parent
 root
 
-
-# In[ ]:
-
-
 TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
 HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
 
@@ -97,10 +93,6 @@ print('10. BGD')
 
 pilot = input()
 assert pilot in ['0','1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], "Invalid pilot area selected."
-
-
-# In[ ]:
-
 
 if pilot == "0":
     #input_shp = "C:/Geotar/COL/geodata/Processed/Education/Education_facilities.shp"
@@ -196,7 +188,7 @@ bbox
 # ## Fetch NDVI dekadal data for the period and pilot of interest
 
 
-def Process_ndvi():
+def process_ndvi():
     """
     Fetches and computes the NDVI for the specified period.
     Returns:
@@ -274,6 +266,7 @@ def Process_ndvi():
         print(f"{filename} saved successfully")
     return()
 
+process_ndvi()
 
 # ## Fetch the dekadal NDVI anomaly data from HDC
 
@@ -380,6 +373,8 @@ def process_ndvi_anomaly():
         print(f"{filename} saved successfully")
     return()
 
+process_ndvi_anomaly()
+
 
 # # CHIRPS processing
 
@@ -410,10 +405,6 @@ def process_CHIRPS():
     # Print the updated period
     print("CHIRPS period:", period)
 
-
-    # In[ ]:
-
-
     CHIRPS = hdc_stac_client.search(bbox=bbox,
         #collections=['mod13q1_vim_native'],
         collections=['rfh_dekad'],
@@ -428,9 +419,6 @@ def process_CHIRPS():
 
     # Paths to Save the zarr file
 
-    # In[ ]:
-
-
     # create a directory to store the geotiff files
     output_dir_zarr = f'C:/Geotar/{pilot_name}/geodata/zarr'
     if not os.path.exists(output_dir_zarr):
@@ -439,8 +427,6 @@ def process_CHIRPS():
 
 
     # Save the zarr file
-
-    # In[ ]:
 
 
     # Delete the existing Zarr store if it exists
@@ -453,15 +439,10 @@ def process_CHIRPS():
 
     # Load xarray from zarr file (optional)
 
-    # In[ ]:
-
-
     #CHIRPS_stac = xr.open_zarr(outfile)
 
 
     # Mask out no data values
-
-    # In[ ]:
 
 
     CHIRPS_stac = xr.where(CHIRPS_stac == -9999, np.nan, CHIRPS_stac)
@@ -470,17 +451,12 @@ def process_CHIRPS():
 
     # Group CHIRPS data by month
 
-    # In[ ]:
-
 
     CHIRPS_m = CHIRPS_stac.groupby('time.month').sum('time', skipna=False)
     CHIRPS_m
 
 
     # Creates the seasonal monthly mean precipitation
-
-    # In[ ]:
-
 
     CHIRPS_m_s = CHIRPS_m.mean(dim=['month'])
     CHIRPS_m_s
@@ -512,6 +488,8 @@ def process_CHIRPS():
     CHIRPS_s_s.rio.to_raster(filename_s_s, driver='GTiff')
     print(f'{filename_s_s} saved successfully')
     return()
+
+process_CHIRPS()
 
 # Query and access the dekadal **CHIRPS precipitation anomaly** stored in the datacube
 
@@ -627,7 +605,9 @@ def process_CHIRPS_Anomaly():
         # write the data to a geotiff file
         da.rio.to_raster(filename, driver='GTiff')
         print(f'{filename} saved successfully')
-        return()
+    return()
+
+process_CHIRPS_Anomaly()
 
 
 # # Land Surface temperature processing
@@ -728,6 +708,8 @@ def process_LST():
     #LST_an_m
     LST_an_m
     return()
+
+process_LST()
 
 
 # Seasonal mean anomaly
@@ -842,6 +824,9 @@ def process_LST_anomaly():
         # write the data to a geotiff file
         da.rio.to_raster(filename, driver='GTiff')
         print(f'{filename} saved successfully')
+    return()
+
+process_LST_anomaly()
 
 
 
