@@ -3,11 +3,8 @@
 
 # NDVI anomalies
 
-import folium
-import folium.plugins
 import geopandas as gpd
 import shapely.geometry
-from IPython.display import HTML, display
 from pystac_client import Client
 from odc.stac import configure_rio, stac_load
 import pathlib
@@ -827,6 +824,3 @@ def process_LST_anomaly():
     return()
 
 process_LST_anomaly()
-
-
-

@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5c509fae-c3cd-4f6a-98ef-c6fde9b1199b" name="Changes" comment="Function select pilot with dict object" />
+    <list default="true" id="5c509fae-c3cd-4f6a-98ef-c6fde9b1199b" name="Changes" comment="Function select pilot with dict object">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GeoScripts/NDVI_CHIRPS_LST_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/GeoScripts/NDVI_CHIRPS_LST_processing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GeoScripts/Raster_Aggregation.py" beforeDir="false" afterPath="$PROJECT_DIR$/GeoScripts/Raster_Aggregation.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -205,7 +209,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/GeoScripts/NDVI_CHIRPS_LST_processing.py</url>
-          <line>40</line>
+          <line>33</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
