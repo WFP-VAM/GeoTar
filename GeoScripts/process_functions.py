@@ -1,179 +1,23 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# NDVI anomalies
-
+import os
 import geopandas as gpd
 import shapely.geometry
 from pystac_client import Client
 from odc.stac import configure_rio, stac_load
-import pathlib
+
 import json
 import rasterio
 import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import zarr
 import rioxarray
-import os
 from osgeo import gdal
 import shutil
-
-
-# Now we need to configure and start a session in the HDC, to do this, we need to log-in using a token
-
-
-root = pathlib.Path().resolve().parent.parent
-root
-
-TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
-HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
-
 import os
-def _get_hdc_stac_param_from_env():
-    
-    if "JUPYTERHUB_USER" in os.environ:
-    
-        signer = None
-        header = None
-        aws={}   # Get credentials for accessing S3 bucket 
+from typing import List
+import os
 
-    else:
-
-        def make_signer(fname="./tk.json"):
-            """
-            Loads token from file at fname, and returns a function patching request urls with said token
-            """
-            tk = ""
-            with open(fname, "rt") as src:
-                tk = json.load(src)["tk"]
-
-            def sign(url, _tk=tk):
-                signed = f"{url}?{_tk}"
-                return signed
-
-            return sign
-
-        signer = make_signer(TOKEN_PATH)
-        header = {"origin": "https://wfp.org"}
-        aws = None
-        
-    # Instantiate an API client pointing to the WFP HDC STAC API
-    hdc_stac_client = Client.open(HDC_STAC_URL, headers=header)
-    
-    # Set up GDAL/rasterio configuration.
-    configure_rio(cloud_defaults=True, verbose=True, aws=aws)
-        
-    return hdc_stac_client, signer
-
-
-#
-# STAC CLIENTS
-#
-
-hdc_stac_client, signer = _get_hdc_stac_param_from_env() 
-
-
-# Ask the user to select an option
-print('Please select the pilot area:')
-print('0. GLOBAL')
-print('1. COL')
-print('2. CHAD')
-print('3. IRAQ Dahuk')
-print('4. IRAQ Najaf')
-print('5. IRAQ')
-print('6. LBN')
-print('7. VEN')
-print('9. SOM')
-print('10. BGD')
-
-pilot = input()
-assert pilot in ['0','1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], "Invalid pilot area selected."
-
-if pilot == "0":
-    #input_shp = "C:/Geotar/COL/geodata/Processed/Education/Education_facilities.shp"
-    pilot_name = "GLOBAL"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/workspace/test_mask.shp"
-    period = "2021-05-01/2022-01-31"
-    #output = f"C:/Geotar/COL/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected GLobal")
-elif pilot == "1":
-    #input_shp = "C:/Geotar/COL/geodata/Processed/Education/Education_facilities.shp"
-    pilot_name = "COL"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/COL_mask.shp"
-    period = "2021-05-01/2022-01-31"
-    #output = f"C:/Geotar/COL/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Colombia")
-elif pilot == "2":
-    pilot_name = "CHAD"
-    #input_shp = "zip://C:/Geotar/CHAD/geodata/Processed/Education/hotosm_chad_education_facilities_points_shp.zip/hotosm_chad_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/Chad_mask.shp"
-    period = "2022-05-01/2023-01-31"
-    #periodlta = "1970-01-01/1970-12-31"
-    #output = f"C:/Geotar/CHAD/geodata/Processed/{res_folder}/dist_{res_folder}_"+ out_name
-    print("You selected CHAD")
-elif pilot == "3":
-    pilot_name = "IRAQ_D"
-    #input_shp = "zip://C:/Geotar/IRAQ_D/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/Dahuk_mask.shp"
-    period = "2021-11-01/2022-05-31"
-    #output = f"C:/Geotar/IRAQ_D/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected IRAQ Dahuk")
-elif pilot == "4":
-    pilot_name = "IRAQ_N"
-    period = "2021-11-01/2022-05-31"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/Najaf_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected IRAQ Najaf")
-elif pilot == "5":
-    pilot_name = "IRAQ"
-    period = "2021-11-01/2022-05-31"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/Iraq_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected IRAQ")
-elif pilot == "6":
-    pilot_name = "LBN"
-    period = "2021-10-01/2022-04-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/LBN_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Lebanon")
-elif pilot == "7":
-    pilot_name = "VEN"
-    period = "2023-01-01/2023-07-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/VEN_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Venezuela")
-elif pilot == "8":
-    pilot_name = "AFG"
-    period = "2023-04-01/2023-07-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/{pilot_name}_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Afghanistan")
-elif pilot == "9":
-    pilot_name = "SOM"
-    period = "2023-04-01/2023-07-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/{pilot_name}_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Somalia")
-elif pilot == "10":
-    pilot_name = "BGD"
-    period = "2023-04-01/2023-07-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
-    mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/{pilot_name}_mask.shp"
-    #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
-    print("You selected Bangladesh")
-    
-
-
-
-def process_ndvi(bbox, period ):
+def process_ndvi(bbox: List, period: str, pilot_name: str):
     """
     Fetches and computes the NDVI for the specified period.
     Returns:
@@ -187,20 +31,16 @@ def process_ndvi(bbox, period ):
 
     res = 0.0022457882102988 # 250 or 0.01 for 1km
     ndvi_stack = stac_load(NDVI,  output_crs='EPSG:4326', resolution= res, patch_url=signer, bbox=bbox)
-    ndvi_stack
     # Aggregate the dekadal NDVI by month
     m_ndvi = ndvi_stack.groupby('time.month').mean('time')
     m_ndvi = m_ndvi * 0.0001
-    m_ndvi
 
     # Mask out extreme values
     m_ndvi = xr.where(m_ndvi < -1, np.nan, m_ndvi)
     m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
-    m_ndvi
 
     #Aggregate the data by season
     ndvi_m_s = m_ndvi.mean(dim=["month"])
-    ndvi_m_s
 
     output_dir_s = f"C:/Geotar/{pilot_name}/geodata/Processed/vegetation/season"
     filename_m_s = f'{output_dir_s}/ndvi_m_s.tif'
@@ -251,11 +91,9 @@ def process_ndvi(bbox, period ):
         print(f"{filename} saved successfully")
     return()
 
-process_ndvi()
 
-# ## Fetch the dekadal NDVI anomaly data from HDC
 
-def process_ndvi_anomaly():
+def process_ndvi_anomaly(bbox: List, pilot_name: str):
     """
         Fetches and computes the NDVI anomaly for the specified period.
         Returns:
@@ -358,15 +196,6 @@ def process_ndvi_anomaly():
         print(f"{filename} saved successfully")
     return()
 
-process_ndvi_anomaly()
-
-
-# # CHIRPS processing
-
-# The dates for the precipitation need to be adjusted, the idea is to account for a lag effect of a change the precipitation. The date shift was arbitrarily modified by one month in advance compared with the NDVI dates.
-
-import datetime
-from dateutil.relativedelta import relativedelta
 
 def process_CHIRPS():
 
@@ -474,9 +303,8 @@ def process_CHIRPS():
     print(f'{filename_s_s} saved successfully')
     return()
 
-process_CHIRPS()
 
-# Query and access the dekadal **CHIRPS precipitation anomaly** stored in the datacube
+
 
 def process_CHIRPS_Anomaly():
 
@@ -502,11 +330,6 @@ def process_CHIRPS_Anomaly():
     CHIRPS_an_stac.to_zarr(outfile)
     print(f'{outfile} saved')
 
-
-    # Load the xarray anomay from a zarr file (optional)
-
-    #CHIRPS_an_stac = xr.open_zarr(outfile)
-    #CHIRPS_an_stac
 
 
     # Mask out/set no data values
@@ -592,7 +415,8 @@ def process_CHIRPS_Anomaly():
         print(f'{filename} saved successfully')
     return()
 
-process_CHIRPS_Anomaly()
+
+
 
 
 # # Land Surface temperature processing
@@ -694,10 +518,8 @@ def process_LST():
     LST_an_m
     return()
 
-process_LST()
 
 
-# Seasonal mean anomaly
 
 def process_LST_anomaly():
 
@@ -715,9 +537,6 @@ def process_LST_anomaly():
     #LST_an_s
 
 
-    # Seasonal max anomaly
-
-    # In[ ]:
 
 
     LST_an_s_max = LST_an_m.max(dim=['month'])
@@ -728,10 +547,6 @@ def process_LST_anomaly():
     image_an_max.rio.to_raster(filename_s_max, driver='GTiff')
     print(f'{filename_s_max} saved successfully')
 
-
-    # Export the mean seasonal temperature
-
-    # In[ ]:
 
 
     LST_s = LST_m.mean(dim=['month'])
@@ -747,7 +562,7 @@ def process_LST_anomaly():
     print(f'{filename_s} saved successfully')
 
 
-    # Export the max seasonal temperature
+    # Export the max seasonal temperaturero
 
     # In[ ]:
 
@@ -764,13 +579,6 @@ def process_LST_anomaly():
     image_max.rio.to_raster(filename_s_max, driver='GTiff')
     print(f'{filename_s_max} saved successfully')
 
-
-    # Export monthly LST files
-
-    # In[ ]:
-
-
-    #LST_m = LST_m.drop('tnd')
     # create a directory to store the geotiff files
     output_dir = f'C:/Geotar/{pilot_name}/geodata/Processed/Temperature/'
     if not os.path.exists(output_dir):
@@ -810,5 +618,3 @@ def process_LST_anomaly():
         da.rio.to_raster(filename, driver='GTiff')
         print(f'{filename} saved successfully')
     return()
-
-process_LST_anomaly()

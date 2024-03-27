@@ -1,0 +1,4 @@
+# This code runs on python 3.9
+
+geopandas==0.12.2
+rioxarray
