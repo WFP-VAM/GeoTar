@@ -9,8 +9,10 @@ from pystac_client import Client
 from odc.stac import configure_rio, stac_load
 import pathlib
 import json
-
+import os
 from process_functions import *
+#from get_polygon_data import *
+#from prox_GDAL import *
 
 
 root = pathlib.Path().resolve().parent.parent
@@ -18,9 +20,6 @@ root
 
 TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
 HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
-
-import os
-
 
 
 def _get_hdc_stac_param_from_env():
@@ -59,17 +58,24 @@ def _get_hdc_stac_param_from_env():
         
     return hdc_stac_client, signer
 
-hdc_stac_client, signer = _get_hdc_stac_param_from_env() 
-
 masks = {
     'GLOBAL': {  "pilot_name" : "GLOBAL'",
             "mask_shp" : f"C:/Geotar/GLOBAL/geodata/workspace/test_mask.shp",
             "period" : "2021-05-01/2022-01-31", 'country_name':'All Countries'},
-    'COL': {"pilot_name" : "COL'",
-            "mask_shp" : f"C:/Geotar/COL/geodata/workspace/COL_mask.shp",
+    'COL': {"pilot_name" : "COL",
+            "mask_shp" : f"C:/Geotar/COL/geodata/processed/mask/COL_mask.shp",
             "period" : "2021-05-01/2022-01-31"},
     'CHAD': {"pilot_name": "CHAD",
-            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/COL_mask.shp",
+            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/CHAD_mask.shp",
+            "period": "2021-05-01/2022-01-31"},
+    'IRAQ': {"pilot_name": "IRAQ",
+            "mask_shp": f"C:/Geotar/IRAQ/geodata/workspace/IRAQ_mask.shp",
+            "period": "2021-05-01/2022-01-31"},
+    'LBN': {"pilot_name": "LBN",
+            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/LBN_mask.shp",
+            "period": "2021-05-01/2022-01-31"},
+    'LBN': {"pilot_name": "LBN",
+            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/LBN_mask.shp",
             "period": "2021-05-01/2022-01-31"},
 }
 
@@ -93,18 +99,32 @@ if __name__ =='__main__':
     print('10. BGD')
 
     pilot = input()
+    hdc_stac_client, signer = _get_hdc_stac_param_from_env()
 
     area_shp = gpd.read_file(masks[pilot]['mask_shp'])
     period = masks[pilot]['period']
     pilot_name = masks[pilot]['pilot_name']
 
 
-    # Get the bounding box of the shapefile
+    # Get the bounding box of the signershapefile
     bbox = area_shp.total_bounds
 
-    process_ndvi(bbox=bbox, period=period, pilot_name=pilot_name)
-    process_CHIRPS_Anomaly(bbox=bbox, period=period)
-    process_ndvi_anomaly(bbox=bbox, period=period)
-    process_LST_anomaly(bbox=bbox, period=period)
-    process_LST(bbox=bbox, period=period)
-    process_CHIRPS(bbox=bbox, period=period)
+    # Instantiate the Process class
+    process_obj = Process(bbox=bbox,
+                  period=period,
+                  pilot_name=pilot_name,
+                  hdc_stac_client=hdc_stac_client,
+                  signer=signer)
+    process_obj.process_ndvi()
+    process_obj.process_ndvi_anomaly()
+
+    # process_ndvi(bbox=bbox,
+    #              period=period,
+    #              pilot_name=pilot_name,
+    #              hdc_stac_client=hdc_stac_client,
+    #              signer=signer)
+    # process_ndvi_anomaly(bbox=bbox, period=period, pilot_name=pilot_name)
+    # process_CHIRPS(bbox=bbox, period=period, pilot_name=pilot_name)
+    # process_CHIRPS_Anomaly(bbox=bbox, period=period, pilot_name=pilot_name)
+    # process_LST(bbox=bbox, period=period, pilot_name=pilot_name)
+    # process_LST_anomaly(bbox=bbox, period=period, pilot_name=pilot_name)
