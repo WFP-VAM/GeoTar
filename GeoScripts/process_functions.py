@@ -35,6 +35,7 @@ class Process:
         Returns:
         - Raster file with mean NDVI for the selected period.
         """
+        print("Processing NDVI")
         NDVI = self.hdc_stac_client.search(bbox=self.bbox,
                                       # collections=["mod13q1_vim_native"],
                                       collections=["mxd13q1_vim_dekad"],
@@ -60,7 +61,7 @@ class Process:
             os.makedirs(output_dir_s)
 
         # write the data to a geotiff file
-        #ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff')
+        ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff')
         print(f"{filename_m_s} saved successfully")
 
         # Mask NDVI using land cover
@@ -81,12 +82,12 @@ class Process:
         ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
 
         # save the masked ndvi data
-        ndvi_masked.rio.to_raster(f'{output_dir_s}/ndvi_m_s.tif', driver='GTiff')
+        #ndvi_masked.rio.to_raster(f'{output_dir_s}/ndvi_m_s.tif', driver='GTiff')
 
         # Save the monthly ndvi files
 
         # create a directory to store the geotiff files
-        output_dir = f"/{self.pilot_name}/geodata/Processed/Vegetation"
+        output_dir = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
@@ -111,6 +112,7 @@ class Process:
              - raster file with the mean NDVI anomaly for the period selected.
              - raster file with the maximum NDVI anomaly for the period selected.
             """
+        print("Processing NDVI anomalies")
         #lt_dates = "2002-07-01/2018-07-01"
         query_ndvi_anom = self.hdc_stac_client.search(bbox=self.bbox,
         #collections=["mod13q1_vim_native"],
@@ -158,7 +160,7 @@ class Process:
 
 
         # Mask NDVI anomaly using land cover
-        cover_path = f'C:\Geotar\{self.pilot_name}\geodata\Processed\LandCover\Worldcover_{self.pilot_name}.tif'
+        cover_path = f'C:/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif'
         mask_array = rioxarray.open_rasterio(cover_path)
         mask_array = mask_array.squeeze("band", drop=True)
         mask_array = mask_array.rename({'x': 'longitude', 'y': 'latitude'})
@@ -216,7 +218,7 @@ class Process:
             # write the data to a geotiff file
             image.rio.to_raster(filename, driver='GTiff')
             print(f"{filename} saved successfully")
-        return()
+        return
 
 
     def process_CHIRPS(self):
@@ -224,6 +226,7 @@ class Process:
         :
         return:
         """
+        print("Processing CHIRPS")
 
         # print the NDVI period:
         print("NDVI period:", self.period)
@@ -345,12 +348,19 @@ class Process:
         # write the data to a geotiff file
         CHIRPS_s_s.rio.to_raster(filename_s_s, driver='GTiff')
         print(f'{filename_s_s} saved successfully')
-        return()
+        return
 #
 #
 #
 #
     def process_CHIRPS_Anomaly(self):
+        """
+
+        Returns:
+
+        """
+
+        print("Processing CHIRPS anomalies")
 
         CHIRPS_an = self.hdc_stac_client.search(bbox=self.bbox,
             #collections=['mod13q1_vim_native'],
@@ -436,13 +446,15 @@ class Process:
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
-        return()
+        return
 #
 
 # # # Land Surface temperature processing
 #
     # Need to readjust the dates of the period to have same dates as the NDVI
     def process_LST(self):
+
+        print("Processing Land surface temperature")
 
         # print the NDVI period:
         print("CHIRPS period:", self.period)
@@ -558,12 +570,13 @@ class Process:
             da.tda.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
 
-        return()
+        return
 #
 #
 #
 #
     def process_LST_anomaly(self):
+        print("Processing Land surface temperature anomalies")
         LST_anom_query = self.hdc_stac_client.search(bbox=self.bbox,
             #collections=['mod13q1_vim_native'],
             collections=['myd11a2_txd_dekad'],
@@ -624,4 +637,4 @@ class Process:
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
-        return()
+        return
