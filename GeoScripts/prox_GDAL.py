@@ -289,7 +289,7 @@ def proximity_rasters():
     src_ds = None
     dst_ds = None
     prox = None
-    return()
+    return
 
 
 proximity_rasters()

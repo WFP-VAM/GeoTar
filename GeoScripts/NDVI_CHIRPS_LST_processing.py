@@ -19,6 +19,8 @@ import rioxarray
 import os
 from osgeo import gdal
 import shutil
+import datetime
+from dateutil.relativedelta import relativedelta
 
 
 # Now we need to configure and start a session in the HDC, to do this, we need to log-in using a token
@@ -364,9 +366,6 @@ process_ndvi_anomaly()
 # # CHIRPS processing
 
 # The dates for the precipitation need to be adjusted, the idea is to account for a lag effect of a change the precipitation. The date shift was arbitrarily modified by one month in advance compared with the NDVI dates.
-
-import datetime
-from dateutil.relativedelta import relativedelta
 
 def process_CHIRPS():
 

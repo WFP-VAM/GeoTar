@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 from pystac_client import Client
 from odc.stac import configure_rio, stac_load
 import os
-
+import json
+import rioxarray
 
 # In[3]:
 
@@ -56,6 +57,7 @@ elif pilot == "1":
     mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/COL_mask.shp"
     period = "2021-05-01/2022-01-31"
     #output = f"C:/Geotar/COL/geodata/Processed/{res_folder}/dist_"+ out_name
+    out_file = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
     print("You selected Colombia")
 elif pilot == "2":
     pilot_name = "CHAD"
@@ -91,6 +93,7 @@ elif pilot == "6":
     period = "2021-10-01/2022-04-30"
     #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
     mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/LBN_mask.shp"
+    out_file = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
     #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
     print("You selected Lebanon")
 elif pilot == "7":
@@ -144,69 +147,7 @@ if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
 
-# In[7]:
-
-
-# get AOI geometry (select a country name)
-#country = 'Somalia'
-
-
-# In[8]:
-
-
 s3_url_prefix = "https://esa-worldcover.s3.eu-central-1.amazonaws.com"
-
-# load natural earth low res shapefile
-#ne = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
-
-#geom = ne[ne.name == country].iloc[0].geometry
-
-# Define the bounding box coordinates: [minx, miny, maxx, maxy]
-#bbox = [40.39407136, -1.92483662, 51.58562142, 13.63884234]
-
-# Create a GeoDataFrame with a single geometry representing the bounding box
-geom1 = gpd.GeoDataFrame(geometry=[box(bbox[0], bbox[1], bbox[2], bbox[3])], crs='EPSG:4326')
-geom1= geom1.geometry.iloc[0]
-
-# load worldcover grid
-url = f'{s3_url_prefix}/esa_worldcover_grid.geojson'
-#print(url)
-grid = gpd.read_file(url)
-
-# get grid tiles intersecting AOI
-tiles = grid[grid.intersects(geom1)]
-#tiles = gpd.overlay(grid, geom1, how='intersection')
-
-
-# In[9]:
-
-
-# Plot both GeoDataFrames on the same figure
-fig, ax = plt.subplots(figsize=(8, 8))
-
-# Plot the grid GeoDataFrame
-grid.plot(ax=ax, color='lightgray', edgecolor='black', alpha=0.5)
-
-# Create a GeoSeries containing the Polygon object
-geoms = gpd.GeoSeries([geom1])
-
-# Create a GeoDataFrame from the GeoSeries
-gdfplot = gpd.GeoDataFrame(geometry=geoms)
-
-# Plot the bounding box GeoDataFrame
-gdfplot.plot(ax=ax, color='red', alpha=0.5)
-
-# Customize the plot as needed
-ax.set_title("Overlay of GeoDataFrames")
-ax.set_xlabel("Longitude")
-ax.set_ylabel("Latitude")
-
-# Show the plot
-plt.show()
-
-
-# In[10]:
-
 
 year = 2021  # setting this to 2020 will download the v100 product instead
 
@@ -224,9 +165,6 @@ for tile in tqdm(tiles.ll_tile):
 
 
 # ## Create reference raster from MODIS stored in HDC
-
-# In[ ]:
-
 
 TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
 HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
@@ -268,28 +206,21 @@ def _get_hdc_stac_param_from_env():
         
     return hdc_stac_client, signer
 
-
-#
 # STAC CLIENTS
 #
-
-hdc_stac_client, signer = _get_hdc_stac_param_from_env() 
-
-
-# In[ ]:
+hdc_stac_client, signer = _get_hdc_stac_param_from_env()
 
 
-get_ipython().run_cell_magic('time', '', 'NDVI = hdc_stac_client.search(bbox=bbox,\n    #collections=["mod13q1_vim_native"],\n    collections=["mxd13q1_vim_dekad"],\n    datetime="2018-04-01/2018-04-30", #emulates the period of data cube files\n).get_all_items()\n\nres = 0.0022457882102988 # 250 or 0.01 for 1km\nndvi_stack = stac_load(NDVI,  output_crs=\'EPSG:4326\', resolution= res, patch_url=signer, bbox=bbox)\nndvi_stack\n')
+NDVI = hdc_stac_client.search(bbox=bbox,
+    #collections=["mod13q1_vim_native"],
+    collections=["mxd13q1_vim_dekad"],
+    datetime="2018-04-01/2018-04-30", #emulates the period of data cube files
+).get_all_items()
 
+res = 0.0022457882102988 # 250 or 0.01 for 1km
+ndvi_stack = stac_load(NDVI,  output_crs='EPSG:4326', resolution= res, patch_url=signer, bbox=bbox)
 
-# In[ ]:
-
-
-ndvi = ndvi_stack.mean(dim=["month"])
-
-
-# In[ ]:
-
+ndvi = ndvi_stack.mean(dim=["time"])
 
 output_dir_s = f"C:/Geotar/{pilot_name}/geodata/Processed/mask"
 filename_mod = f'{output_dir_s}/MODIS_mask.tif'
@@ -297,21 +228,13 @@ if not os.path.exists(output_dir_s):
     os.makedirs(output_dir_s)
 
 # write the data to a geotiff file
-ndvi_m_s.rio.to_raster(filename_mod, driver='GTiff')
+ndvi.rio.to_raster(filename_mod, driver='GTiff')
 print(f"{filename_mod} saved successfully")
 
-
-# In[ ]:
-
-
 # Define the reference raster
-ref_tiff = filename_mod
+ref_tif = filename_mod
 
-
-# In[ ]:
-
-
-def WorldcovertoMODIS(dst_file,tiffs_path, ref_tif):
+def WorldcovertoMODIS(dst_file, tiffs_path):
     '''Function to mosaic the tiff files downloaded from the worldcover dataset AWS bucket
     Inputs are:
     1. the output tiff path
@@ -326,6 +249,15 @@ def WorldcovertoMODIS(dst_file,tiffs_path, ref_tif):
         print(i)
         
     def get_extent(ref_tif):
+        '''
+        Function to get extent of the reference file
+        Args:
+            ref_tif: reference dataset path
+
+        Returns:
+            extent coordinates to fill the kwargs used in gdal warp
+        '''
+        print(ref_tif)
         dataset = gdal.Open(ref_tif)
         if dataset is None:
             print("Failed to open the raster file.")
@@ -355,23 +287,18 @@ def WorldcovertoMODIS(dst_file,tiffs_path, ref_tif):
         'outputBoundsSRS':'EPSG:4326',
         'xRes':xRes,
         'yRes':yRes,
-        'width':4984,
-        'height':6932,
+        # 'width':4984,
+        # 'height':6932,
            }
     #warp opetation
     gdal.Warp(dst_file, tiffslist, **kwargs)
+    print(dst_file, "processed successfully")
     dst_file= None
-    print(mosaic_file_tif, "processed successfully")
+    #print(mosaic_file_tif, "processed successfully")
+    return(dst_file)
 
 
-# In[ ]:
-
-
-WorldcovertoMODIS(mosaic_file_tif, output_folder, ref_tiff)
-
-
-# In[12]:
-
+WorldcovertoMODIS(out_file,output_folder)
 
 import shutil
 shutil.rmtree(output_folder)

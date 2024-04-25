@@ -21,7 +21,7 @@ from dateutil.relativedelta import relativedelta
 
 
 class Vector:
-    def __init__(self, bbox: List, period: str, pilot_name: str, hdc_stac_client, signer):
+    def __init__(self, bbox: List, period: str, pilot_name: str):
 
         self.bbox=bbox
         self.period=period

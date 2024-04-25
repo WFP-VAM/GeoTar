@@ -223,8 +223,9 @@ class Process:
 
     def process_CHIRPS(self):
         """
-        :
+        Fetches CHIRPS data from HDC
         return:
+        A xarray object with the timeseries and the exported tif files
         """
         print("Processing CHIRPS")
 
@@ -349,15 +350,13 @@ class Process:
         CHIRPS_s_s.rio.to_raster(filename_s_s, driver='GTiff')
         print(f'{filename_s_s} saved successfully')
         return
-#
-#
-#
-#
+
+
     def process_CHIRPS_Anomaly(self):
         """
-
+        Fetches CHIRPS anomaly data from HDC
         Returns:
-
+        A xarray object with the CHIRPS anomaly timeseries and the exported tif files
         """
 
         print("Processing CHIRPS anomalies")
@@ -447,12 +446,16 @@ class Process:
             da.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
         return
-#
 
 # # # Land Surface temperature processing
 #
     # Need to readjust the dates of the period to have same dates as the NDVI
     def process_LST(self):
+        '''
+        Fetches data Land surface temperature data from HDC
+        Returns:
+        A xarray object with the lST timeseries and the exported tif files
+        '''
 
         print("Processing Land surface temperature")
 
@@ -571,11 +574,14 @@ class Process:
             print(f'{filename} saved successfully')
 
         return
-#
-#
-#
-#
+
+
     def process_LST_anomaly(self):
+        '''
+        Fetches Lands surface temperature anomaly data from HDC
+        Returns:
+        A xarray object with the LST anomaly timeseries and the exported tif files
+        '''
         print("Processing Land surface temperature anomalies")
         LST_anom_query = self.hdc_stac_client.search(bbox=self.bbox,
             #collections=['mod13q1_vim_native'],

@@ -59,24 +59,27 @@ def _get_hdc_stac_param_from_env():
     return hdc_stac_client, signer
 
 masks = {
-    'GLOBAL': {  "pilot_name" : "GLOBAL'",
+    'GLOBAL': { "pilot_name" : "GLOBAL'",
             "mask_shp" : f"C:/Geotar/GLOBAL/geodata/workspace/test_mask.shp",
             "period" : "2021-05-01/2022-01-31", 'country_name':'All Countries'},
     'COL': {"pilot_name" : "COL",
             "mask_shp" : f"C:/Geotar/COL/geodata/processed/mask/COL_mask.shp",
             "period" : "2021-05-01/2022-01-31"},
     'CHAD': {"pilot_name": "CHAD",
-            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/CHAD_mask.shp",
+            "mask_shp": f"C:/Geotar/CHAD/geodata/processed/mask/CHAD_mask.shp",
             "period": "2021-05-01/2022-01-31"},
     'IRAQ': {"pilot_name": "IRAQ",
-            "mask_shp": f"C:/Geotar/IRAQ/geodata/workspace/IRAQ_mask.shp",
+            "mask_shp": f"C:/Geotar/IRAQ/geodata/processed/mask/IRAQ_mask.shp",
             "period": "2021-05-01/2022-01-31"},
     'LBN': {"pilot_name": "LBN",
-            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/LBN_mask.shp",
+            "mask_shp": f"C:/Geotar/LBN/geodata/processed/mask/LBN_mask.shp",
+            "period": "2023-10-01/2024-03-21"},
+    'BGD': {"pilot_name": "BGD",
+            "mask_shp": f"C:/Geotar/BGD/geodata/processed/mask/BGD_mask.shp",
             "period": "2021-05-01/2022-01-31"},
-    'LBN': {"pilot_name": "LBN",
-            "mask_shp": f"C:/Geotar/CHAD/geodata/workspace/LBN_mask.shp",
-            "period": "2021-05-01/2022-01-31"},
+    'ETH': {"pilot_name": "ETH",
+            "mask_shp": f"C:/Geotar/ETH/geodata/processed/mask/ETH_mask.shp",
+            "period": "2023-01-01/2023-12-31"},
 }
 
 
@@ -97,6 +100,7 @@ if __name__ =='__main__':
     print('7. VEN')
     print('9. SOM')
     print('10. BGD')
+    print('11. ETH')
 
     pilot = input()
     hdc_stac_client, signer = _get_hdc_stac_param_from_env()
@@ -106,7 +110,7 @@ if __name__ =='__main__':
     pilot_name = masks[pilot]['pilot_name']
 
 
-    # Get the bounding box of the signershapefile
+    # Get the bounding box of the shapefile
     bbox = area_shp.total_bounds
 
     # Instantiate the Process class
@@ -117,6 +121,11 @@ if __name__ =='__main__':
                   signer=signer)
     process_obj.process_ndvi()
     process_obj.process_ndvi_anomaly()
+    process_obj.process_CHIRPS()
+    process_obj.process_CHIRPS_Anomaly()
+    process_obj.process_LST()
+    process_obj.process_LST_anomaly()
+
 
     # process_ndvi(bbox=bbox,
     #              period=period,
