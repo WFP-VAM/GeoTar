@@ -11,7 +11,8 @@ import pathlib
 import json
 import os
 from process_functions import *
-#from get_polygon_data import *
+from compute_proximity import *
+from get_polygon_data import *
 #from prox_GDAL import *
 
 
@@ -23,12 +24,12 @@ HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
 
 
 def _get_hdc_stac_param_from_env():
-    
+
     if "JUPYTERHUB_USER" in os.environ:
-    
+
         signer = None
         header = None
-        aws={}   # Get credentials for accessing S3 bucket 
+        aws={}   # Get credentials for accessing S3 bucket
 
     else:
 
@@ -49,13 +50,13 @@ def _get_hdc_stac_param_from_env():
         signer = make_signer(TOKEN_PATH)
         header = {"origin": "https://wfp.org"}
         aws = None
-        
+
     # Instantiate an API client pointing to the WFP HDC STAC API
     hdc_stac_client = Client.open(HDC_STAC_URL, headers=header)
-    
+
     # Set up GDAL/rasterio configuration.
     configure_rio(cloud_defaults=True, verbose=True, aws=aws)
-        
+
     return hdc_stac_client, signer
 
 masks = {
@@ -119,21 +120,20 @@ if __name__ =='__main__':
                   pilot_name=pilot_name,
                   hdc_stac_client=hdc_stac_client,
                   signer=signer)
-    process_obj.process_ndvi()
-    process_obj.process_ndvi_anomaly()
-    process_obj.process_CHIRPS()
-    process_obj.process_CHIRPS_Anomaly()
-    process_obj.process_LST()
-    process_obj.process_LST_anomaly()
+    # process_obj.process_ndvi()
+    # process_obj.process_ndvi_anomaly()
+    # process_obj.process_CHIRPS()
+    # process_obj.process_CHIRPS_Anomaly()
+    # process_obj.process_LST()
+    # process_obj.process_LST_anomaly()
+
+    process_vector = get_vectors(bbox=bbox,
+                                 period=period,
+                                 pilot_name=pilot_name,
+                                 )
+    process_vector.get_roads()
+    # process_vector.get_conflict()
+    # process_vector.get_schools()
+    # process_vector.get_healthsites()
 
 
-    # process_ndvi(bbox=bbox,
-    #              period=period,
-    #              pilot_name=pilot_name,
-    #              hdc_stac_client=hdc_stac_client,
-    #              signer=signer)
-    # process_ndvi_anomaly(bbox=bbox, period=period, pilot_name=pilot_name)
-    # process_CHIRPS(bbox=bbox, period=period, pilot_name=pilot_name)
-    # process_CHIRPS_Anomaly(bbox=bbox, period=period, pilot_name=pilot_name)
-    # process_LST(bbox=bbox, period=period, pilot_name=pilot_name)
-    # process_LST_anomaly(bbox=bbox, period=period, pilot_name=pilot_name)

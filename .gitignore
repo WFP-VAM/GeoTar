@@ -1,0 +1,11 @@
+Notebooks/
+
+cache/
+
+GeoScripts/.ipynb_checkpoints/
+
+.idea/
+
+*.pyc
+
+*.xml
