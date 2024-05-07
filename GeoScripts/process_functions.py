@@ -45,7 +45,7 @@ class Process:
         res = 0.0022457882102988 # 250 or 0.01 for 1km
         ndvi_stack = stac_load(NDVI,  output_crs='EPSG:4326', resolution= res, patch_url=self.signer, bbox=self.bbox)
         # Aggregate the dekadal NDVI by month
-        m_ndvi = ndvi_stack.groupby('time.month').mean('time')
+        m_ndvi = ndvi_stack.resample(time='1M').mean()
         m_ndvi = m_ndvi * 0.0001
 
         # Mask out extreme values
@@ -53,7 +53,7 @@ class Process:
         m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
 
         #Aggregate the data by season
-        ndvi_m_s = m_ndvi.mean(dim=["month"])
+        ndvi_m_s = m_ndvi.mean(dim="time")
 
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/vegetation/season"
         filename_m_s = f'{output_dir_s}/ndvi_m_s.tif'
@@ -92,11 +92,15 @@ class Process:
             os.makedirs(output_dir)
 
         # loop over all timesteps in the dataset
-        for i in range(len(m_ndvi.month)):
+        for time_val in m_ndvi.time:
+            year = time_val.dt.year.item()
+            month = time_val.dt.month.item()
+
             # extract a single timestep as a DataArray
-            image_ndvi = m_ndvi.isel(month=i)
-            # create a file path for the geotiff file
-            filename = f'{output_dir}/ndvi_{m_ndvi.month.values[i]}.tif'
+            image_ndvi = m_ndvi.sel(time=time_val)
+
+            # create a file path for the geotiff file with both year and month in filename
+            filename = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
             image_ndvi.rio.to_raster(filename, driver='GTiff')
