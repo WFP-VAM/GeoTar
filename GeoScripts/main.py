@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# NDVI anomalies
-
 import geopandas as gpd
 import shapely.geometry
 from pystac_client import Client
@@ -11,7 +6,6 @@ import pathlib
 import json
 import os
 from process_functions import *
-from compute_proximity import *
 from get_polygon_data import *
 #from prox_GDAL import *
 
@@ -65,22 +59,28 @@ masks = {
             "period" : "2021-05-01/2022-01-31", 'country_name':'All Countries'},
     'COL': {"pilot_name" : "COL",
             "mask_shp" : f"C:/Geotar/COL/geodata/processed/mask/COL_mask.shp",
-            "period" : "2021-05-01/2022-01-31"},
+            "period" : "2021-05-01/2022-01-31", "country_name":"Colombia"},
     'CHAD': {"pilot_name": "CHAD",
             "mask_shp": f"C:/Geotar/CHAD/geodata/processed/mask/CHAD_mask.shp",
-            "period": "2021-05-01/2022-01-31"},
+            "period": "2023-06-01/2023-08-30","country_name":"Chad"},
     'IRAQ': {"pilot_name": "IRAQ",
             "mask_shp": f"C:/Geotar/IRAQ/geodata/processed/mask/IRAQ_mask.shp",
-            "period": "2021-05-01/2022-01-31"},
+            "period": "2021-05-01/2022-01-31","country_name":"Iraq"},
     'LBN': {"pilot_name": "LBN",
             "mask_shp": f"C:/Geotar/LBN/geodata/processed/mask/LBN_mask.shp",
-            "period": "2023-10-01/2024-03-21"},
+            "period": "2023-10-01/2024-03-21","country_name":"Lebanon"},
     'BGD': {"pilot_name": "BGD",
             "mask_shp": f"C:/Geotar/BGD/geodata/processed/mask/BGD_mask.shp",
-            "period": "2021-05-01/2022-01-31"},
+            "period": "2023-01-01/2023-12-31","country_name":"Bangladesh"},
     'ETH': {"pilot_name": "ETH",
             "mask_shp": f"C:/Geotar/ETH/geodata/processed/mask/ETH_mask.shp",
-            "period": "2023-01-01/2023-12-31"},
+            "period": "2023-01-01/2023-12-31","country_name":"Ethiopia"},
+    'SOM': {"pilot_name": "SOM",
+            "mask_shp": f"C:/Geotar/SOM/geodata/processed/mask/SOM_mask.shp",
+            "period": "2023-01-01/2023-12-31","country_name":"Somalia"},
+    'VEN': {"pilot_name": "VEN",
+            "mask_shp": f"C:/Geotar/VEN/geodata/processed/mask/VEN_mask.shp",
+            "period": "2023-01-01/2023-12-31","country_name":"Venezuela"},
 }
 
 
@@ -106,11 +106,12 @@ if __name__ =='__main__':
     pilot = input()
     hdc_stac_client, signer = _get_hdc_stac_param_from_env()
 
-    area_shp = gpd.read_file(masks[pilot]['mask_shp'])
+    mask_shp = masks[pilot]['mask_shp']
     period = masks[pilot]['period']
     pilot_name = masks[pilot]['pilot_name']
+    country_name = masks[pilot]['country_name']
 
-
+    area_shp = gpd.read_file(mask_shp)
     # Get the bounding box of the shapefile
     bbox = area_shp.total_bounds
 
@@ -130,10 +131,12 @@ if __name__ =='__main__':
     process_vector = get_vectors(bbox=bbox,
                                  period=period,
                                  pilot_name=pilot_name,
+                                 country_name=country_name,
+                                 mask_shp=mask_shp
                                  )
-    process_vector.get_roads()
+    # process_vector.get_roads()
     # process_vector.get_conflict()
     # process_vector.get_schools()
-    # process_vector.get_healthsites()
+    process_vector.get_healthsites()
 
 

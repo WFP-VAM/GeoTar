@@ -1,14 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 from osgeo import gdal, gdal_array
-import numpy as np
-import os
-from terracatalogueclient import Catalogue 
-from shapely.geometry import Polygon
+# import numpy as np
+# import os
+# from terracatalogueclient import Catalogue
+# from shapely.geometry import Polygon
 import geopandas as gpd
 from shapely.geometry import box
 import requests
@@ -64,6 +58,7 @@ elif pilot == "2":
     #input_shp = "zip://C:/Geotar/CHAD/geodata/Processed/Education/hotosm_chad_education_facilities_points_shp.zip/hotosm_chad_education_facilities_points.shp"
     mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/Chad_mask.shp"
     period = "2022-05-01/2023-01-31"
+    out_file = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
     #periodlta = "1970-01-01/1970-12-31"
     #output = f"C:/Geotar/CHAD/geodata/Processed/{res_folder}/dist_{res_folder}_"+ out_name
     print("You selected CHAD")
@@ -91,10 +86,10 @@ elif pilot == "5":
 elif pilot == "6":
     pilot_name = "LBN"
     period = "2021-10-01/2022-04-30"
-    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
     mask_shp = f"C:/Geotar/{pilot_name}/geodata/Processed/Mask/LBN_mask.shp"
     out_file = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
     #output = f"C:/Geotar/IRAQ_N/geodata/Processed/{res_folder}/dist_"+ out_name
+    #input_shp = "zip://C:/Geotar/IRAQ_N/geodata/Raw/Education/hotosm_irq_education_facilities_points_shp.zip/hotosm_irq_education_facilities_points.shp"
     print("You selected Lebanon")
 elif pilot == "7":
     pilot_name = "VEN"
@@ -146,8 +141,32 @@ output_folder = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/tiles"
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
+# get AOI geometry (select a country name)
+#country = 'Somalia'
 
 s3_url_prefix = "https://esa-worldcover.s3.eu-central-1.amazonaws.com"
+
+# load natural earth low res shapefile
+#ne = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+
+#geom = ne[ne.name == country].iloc[0].geometry
+
+# Define the bounding box coordinates: [minx, miny, maxx, maxy]
+#bbox = [40.39407136, -1.92483662, 51.58562142, 13.63884234]
+
+# Create a GeoDataFrame with a single geometry representing the bounding box
+geom1 = gpd.GeoDataFrame(geometry=[box(bbox[0], bbox[1], bbox[2], bbox[3])], crs='EPSG:4326')
+geom1= geom1.geometry.iloc[0]
+
+# load worldcover grid
+url = f'{s3_url_prefix}/esa_worldcover_grid.geojson'
+#print(url)
+grid = gpd.read_file(url)
+
+# get grid tiles intersecting AOI
+tiles = grid[grid.intersects(geom1)]
+print(tiles)
+#tiles = gpd.overlay(grid, geom1, how='intersection')
 
 year = 2021  # setting this to 2020 will download the v100 product instead
 
@@ -162,7 +181,6 @@ for tile in tqdm(tiles.ll_tile):
         r = requests.get(url, allow_redirects=True)
         with open(out_fn, 'wb') as f:
             f.write(r.content)
-
 
 # ## Create reference raster from MODIS stored in HDC
 
@@ -207,9 +225,7 @@ def _get_hdc_stac_param_from_env():
     return hdc_stac_client, signer
 
 # STAC CLIENTS
-#
 hdc_stac_client, signer = _get_hdc_stac_param_from_env()
-
 
 NDVI = hdc_stac_client.search(bbox=bbox,
     #collections=["mod13q1_vim_native"],
@@ -219,8 +235,9 @@ NDVI = hdc_stac_client.search(bbox=bbox,
 
 res = 0.0022457882102988 # 250 or 0.01 for 1km
 ndvi_stack = stac_load(NDVI,  output_crs='EPSG:4326', resolution= res, patch_url=signer, bbox=bbox)
+ndvi= ndvi_stack.resample(time='1M').mean()
+ndvi = ndvi.mean(dim="time")
 
-ndvi = ndvi_stack.mean(dim=["time"])
 
 output_dir_s = f"C:/Geotar/{pilot_name}/geodata/Processed/mask"
 filename_mod = f'{output_dir_s}/MODIS_mask.tif'
@@ -231,8 +248,15 @@ if not os.path.exists(output_dir_s):
 ndvi.rio.to_raster(filename_mod, driver='GTiff')
 print(f"{filename_mod} saved successfully")
 
+
+# In[ ]:
+
+
 # Define the reference raster
 ref_tif = filename_mod
+
+# In[ ]:
+
 
 def WorldcovertoMODIS(dst_file, tiffs_path):
     '''Function to mosaic the tiff files downloaded from the worldcover dataset AWS bucket
@@ -247,16 +271,8 @@ def WorldcovertoMODIS(dst_file, tiffs_path):
 
     for i in tiffslist:
         print(i)
-        
-    def get_extent(ref_tif):
-        '''
-        Function to get extent of the reference file
-        Args:
-            ref_tif: reference dataset path
 
-        Returns:
-            extent coordinates to fill the kwargs used in gdal warp
-        '''
+    def get_extent(ref_tif):
         print(ref_tif)
         dataset = gdal.Open(ref_tif)
         if dataset is None:
@@ -274,7 +290,7 @@ def WorldcovertoMODIS(dst_file, tiffs_path):
         maxY = geotransform[3]
         maxX = minX + geotransform[1] * dataset.RasterXSize
         minY = maxY + geotransform[5] * dataset.RasterYSize
-    
+
         # Extract x and y resolutions
         xRes = abs(geotransform[1])
         yRes = abs(geotransform[5])
@@ -296,7 +312,6 @@ def WorldcovertoMODIS(dst_file, tiffs_path):
     dst_file= None
     #print(mosaic_file_tif, "processed successfully")
     return(dst_file)
-
 
 WorldcovertoMODIS(out_file,output_folder)
 

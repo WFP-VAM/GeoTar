@@ -1,31 +1,23 @@
 import osmnx as ox
 from shapely.geometry import Polygon
 from shapely.geometry import Point
-#import pathlib
-#import Paths
-#import importlib
-import json
 import requests
-import pandas as pd
-from osgeo import gdal, ogr
-import os
 import geopandas as gpd
 import pandas as pd
-
-from osgeo import gdal
 from typing import List
 import os
-import datetime
+from compute_proximity import proximity_rasters
 
 class get_vectors:
-    def __init__(self, bbox: List, period: str, pilot_name: str):
+    def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str):
 
         self.bbox=bbox
         self.period=period
         self.pilot_name=pilot_name
+        self.country_name = country_name
+        self.mask_shp = mask_shp
         #self.hdc_stac_client=hdc_stac_client
         #self.signer=signer
-
 
     def get_roads(self):
         """
@@ -34,6 +26,8 @@ class get_vectors:
         returns the roads dataset for the mask area and saves it in the data folder
         """
         base_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Roads'
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
         output_file = os.path.normpath(os.path.join(base_dir, 'roads.shp'))
         if not os.path.exists(output_file):
             print('Fetching Roads')
@@ -59,18 +53,20 @@ class get_vectors:
             roads_to_convert = roads_intersecting_polygon[['key', 'geometry', 'length']]
 
             roads_to_convert.to_file(output_file)
+
+            proximity_rasters(self.pilot_name, output_file, self.mask_shp, "roads")
+
             print(f"roads file saved for", self.pilot_name)
         else:
             print("Roads file already exists")
         return
 
-
     def get_conflict(self):
         print('fetching ACLED data')
-        path = r'C:/Users/oscar.bautista/OneDrive - World Food Programme/GLOBAL'
-        api_path = path / 'Geodata' / 'Raw' / 'ACLED'
+        # path = r'C:/Users/oscar.bautista/OneDrive - World Food Programme/GLOBAL/Geodata/Raw/ACLED'
+        api_path = r'C:/Users/oscar.bautista/OneDrive - World Food Programme/GLOBAL/Geodata/Raw/ACLED/acled_key.txt'
         try:
-            with open(api_path / 'acled_key.txt', 'r') as file:
+            with open(api_path, 'r') as file:
                 contents = file.read()
                 print('Key loaded')  # Instead of return
         except FileNotFoundError:
@@ -92,10 +88,10 @@ class get_vectors:
 
         response = requests.get(f'https://api.acleddata.com/acled/read?'
                                 f'key={contents}&email=oscar.bautista@wfp.org&'
-                                f'country={country}&'
+                                f'country={self.country_name}&'
                                 f'&limit=15000')
         # f'first_event_date={start_date}'
-        print(response)
+        #print(response)
 
         # Check if the request was successful and the response exists
         if response and response.status_code == 200:
@@ -169,10 +165,9 @@ class get_vectors:
 
         # Create a GeoDataFrame from the pandas DataFrame and the geometry column
         gdf = gpd.GeoDataFrame(df_period, geometry=geometry, crs='EPSG:4326')
-        print(len(gdf))
+        #print(len(gdf))
 
         area_shp = gpd.read_file(self.mask_shp)
-
         geo_acled = gpd.clip(gdf, area_shp)
         #print(len(geo_acled))
 
@@ -183,106 +178,15 @@ class get_vectors:
         fatalities = geo_acled['fatalities'].sum()
         print(f'fatalities: {fatalities}')
 
-        geo_acled.loc[:, 'event_date'] = geo_acled.loc[:, 'event_date'].astype(str)
+        geo_acled['event_date'] = geo_acled['event_date'].astype(str)
 
         print(f'records in data {len(geo_acled["event_date"])}')
         conf_shp = fr'C:/Geotar/{self.pilot_name}/geodata/Raw/conflict/filtered_acled.shp'
         geo_acled.to_file(conf_shp)
         print(f'Conflict shapefile saved as {conf_shp}')
+        proximity_rasters(self.pilot_name, conf_shp, self.mask_shp, "conflict")
 
-        # Define NoData value of new raster
-        NoData_value = -9999
 
-        # set the name and location of the output raster file
-        # dst_filename = f'C:/Geotar/{pilot}/geodata/Processed/250m/dist_roads.tif'
-        dst_filename = f'C:/Geotar/{self.pilot_name}/geodata/workspace/conflict_ras.tif'
-
-        vector_ds = ogr.Open(self.mask_shp)
-        shp_layer = vector_ds.GetLayer()
-
-        # Open the data source and read in the extent
-        source_ds = vector_ds
-        pixel_size = 0.0022457882102988  # 250m
-
-        xmin, xmax, ymin, ymax = shp_layer.GetExtent()
-
-        # check if the output file already exists, and delete it if it does
-        if os.path.exists(dst_filename):
-            drv = gdal.GetDriverByName('GTiff')
-            drv.Delete(dst_filename)
-
-        # rasterize the vectori file suing the spatial resolution defined
-        ds = gdal.Rasterize(dst_filename, mask_shp, xRes=pixel_size, yRes=pixel_size,
-                            burnValues=1, outputBounds=[xmin, ymin, xmax, ymax],
-                            outputType=gdal.GDT_Byte, allTouched=True)
-        ds = None
-        source_ds = None
-
-        # Define NoData value of the new raster
-        NoData_value = -9999
-
-        # Set the name and location of the output raster file
-        dst_filename = f'C:/Geotar/{self.pilot_name}/geodata/workspace/conflict_points.tif'
-
-        # Define the path to your shapefile (conf_shp should be defined)
-        conf_shp = f'C:/Geotar/{self.pilot_name}/geodata/Raw/conflict/filtered_acled.shp'
-
-        # Read the extent of the shapefile layer
-        pixel_size = 0.0022457882102988  # 250m
-        xmin, xmax, ymin, ymax = shp_layer.GetExtent()
-
-        # Check if the output file already exists and delete it if it does
-        if os.path.exists(dst_filename):
-            drv = gdal.GetDriverByName('GTiff')
-            drv.Delete(dst_filename)
-
-        # Rasterize the vector file using the spatial resolution defined
-        ds = gdal.Rasterize(dst_filename, conf_shp, xRes=pixel_size, yRes=pixel_size,
-                            burnValues=1, outputBounds=[xmin, ymin, xmax, ymax],
-                            outputType=gdal.GDT_Byte, allTouched=True)
-        ds = None
-        print(f'Rasterized conflict data saved as: {dst_filename}')
-
-        output = f'C:/Geotar/{self.pilot_name}/geodata/Processed/250m/dist_conflict.tif'
-
-        src_ds = gdal.Open(dst_filename)
-
-        # get the first band of the source raster file
-        srcband = src_ds.GetRasterBand(1)
-
-        # set the name and location of the output raster file
-        # dst_filename = f'C:/Geotar/{pilot}/geodata/Processed/250m/dist_roads.tif'
-
-        # check if the output file already exists, and delete it if it does
-        if os.path.exists(dst_filename):
-            drv = gdal.GetDriverByName('GTiff')
-            drv.Delete(dst_filename)
-
-        # create a new raster file with the same dimensions and data type as the source raster file
-        # but with only one band of Float32 data type
-        drv = gdal.GetDriverByName('GTiff')
-        dst_ds = drv.Create(output,
-                            src_ds.RasterXSize,
-                            src_ds.RasterYSize, 1,
-                            gdal.GetDataTypeByName('Float32'))
-
-        # set the geotransform and projection of the output raster file
-        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())
-        dst_ds.SetProjection(src_ds.GetProjectionRef())
-
-        # get the first band of the output raster file
-        dstband = dst_ds.GetRasterBand(1)
-
-        # Compute the proximity of the input raster values to the raster value of 1
-        # and write the resulting distances to the output raster file
-        prox = gdal.ComputeProximity(srcband, dstband, ['VALUES=1', 'DISTUNITS=GEO'])
-
-        # close the input and output raster files and bands to free up memory
-        srcband = None
-        dstband = None
-        src_ds = None
-        dst_ds = None
-        prox = None
         return
 
     def get_schools(self):
@@ -300,11 +204,34 @@ class get_vectors:
         export_schools = schools_query[schools_query["amenity"] == "school"]
         export_schools = export_schools[['osmid', 'amenity', 'name', 'geometry']]
         # Filter out geometries that are not points
-        export_schools = export_schools[export_schools['geometry'].apply(lambda geom: geom_type == 'Point')]
+        export_schools = export_schools[export_schools['geometry'].apply(lambda geom: geom.type == 'Point')]
         school_file = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Education/{self.pilot_name}_education.shp"
         export_schools.to_file(school_file)
-        print('school data saved at: ', school_file)
+        proximity_rasters(self.pilot_name, school_file, self.mask_shp, "education")
         return
 
-    def get_healthsites():
-        return
+    def get_healthsites(self):
+
+        print('Fetching health sites...')
+        input_shp = r"C:/Geotar/Global/Geodata/Raw/Health/health_facilities.shp"
+
+        # Read the GeoPandas object
+        gdf = gpd.read_file(input_shp)
+        mask = gpd.read_file(self.mask_shp)
+
+        # Check if gdf intersects with mask
+        if gdf.geometry.intersects(mask.unary_union).any():
+            # If there is an intersection, proceed with clipping
+            gdf_clipped = gpd.clip(gdf, mask)
+
+            output_shape = f"C:/Geotar/{self.pilot_name}/geodata/Processed/health/healthsites.shp"
+            gdf_clipped.to_file(output_shape)
+            print(f'health sites saved at: {output_shape}')
+            proximity_rasters(self.pilot_name, output_shape, self.mask_shp, "health")
+            return
+        else:
+            # No intersection found
+            print("No intersection found between the health sites database and the mask.")
+            return None
+
+

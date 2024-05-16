@@ -9,3 +9,5 @@ GeoScripts/.ipynb_checkpoints/
 *.pyc
 
 *.xml
+
+__pycache__/

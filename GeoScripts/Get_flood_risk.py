@@ -1,5 +1,6 @@
 import geopandas as gpd
 from osgeo import gdal
+import os
 def get_original_resolution(dataset):
     # Assuming the resolution is stored in the GeoTransform (affine transformation parameters)
     x_res = abs(dataset.GetGeoTransform()[1])  # Get pixel width (x resolution)
@@ -34,7 +35,7 @@ def get_flood_risk(mask_shp, pilot):
         print(f"Error occurred while listing files from FTP: {e}")
         file_list = []
 
-    print('Fetching data from the web...')
+    print('Fetching flood data from the web...')
     selected_files = []
     for filename in file_list:
         if filename.lower().endswith('.tif'):
@@ -70,17 +71,20 @@ def get_flood_risk(mask_shp, pilot):
         print(file)
 
     # # GDAL Warp options
-    kwargs = {'format': 'GTiff',  # Output format (GeoTIFF)
-              # 'outputBounds': [-180.0, -90.0, 180.0, 90.0],  # Output bounds [minX, minY, maxX, maxY]
-              'outputBoundsSRS': 'EPSG:4326',  # Spatial reference system for output bounds (WGS84)
+    kwargs = {'format': 'GTiff',
               'xRes': x_res,
-              'yRes': y_res}
+              'yRes': y_res,
+              'dstSRS': 'EPSG:4326'}
 
     print('creating mosaic...')
-    mosaic_path = f'C://Geotar/{pilot}/geodata/processed/floods/flood_risk_{scenario}.tif'
+    base_path = f'C://Geotar/{pilot}/geodata/processed/floods/'
+    mosaic_path = f'{base_path}flood_risk_{scenario}.tif'
+
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
 
     gdal.Warp(mosaic_path, [ftp_vsi_url + file for file in selected_files], **kwargs)
     print(f'mosaic saved as:{mosaic_path}')
     return
 
-get_flood_risk(f'C:/Geotar/LBN/geodata/Processed/Mask/LBN_mask.shp', 'LBN')
+get_flood_risk(f'C:/Geotar/SOM/geodata/Processed/Mask/SOM_mask.shp', 'SOM')

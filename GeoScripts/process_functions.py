@@ -1,4 +1,4 @@
-
+import rasterio.crs
 from odc.stac import configure_rio, stac_load
 import xarray as xr
 import numpy as np
@@ -33,6 +33,7 @@ class Process:
                                       ).get_all_items()
 
         res = 0.0022457882102988 # 250 or 0.01 for 1km
+        crs = rasterio.crs.CRS.from_epsg(4326)
         ndvi_stack = stac_load(ndvi,  output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
         # Aggregate the dekadal NDVI by month
         m_ndvi = ndvi_stack.resample(time='1M').mean()
@@ -44,14 +45,16 @@ class Process:
 
         #Aggregate the data by season
         ndvi_m_s = m_ndvi.mean(dim="time")
+        # ndvi_m_s = ndvi_m_s.set_crs(crs)
+        year = m_ndvi.time.dt.year.item(0)
 
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/vegetation/season"
-        filename_m_s = f'{output_dir_s}/ndvi_m_s.tif'
+        filename_m_s = f'{output_dir_s}/ndvi_m_s_{year}.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
         # write the data to a geotiff file
-        ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff')
+        ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff', crs='EPSG:4326')
         print(f"{filename_m_s} saved successfully")
 
         # Mask NDVI using land cover
@@ -71,10 +74,11 @@ class Process:
         xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
         # Create a mask where conditions are not met and set to 0 where conditions are met
         ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
-        ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
+        # ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
+        # ndvi_masked.set_crs(crs)
 
         # save the masked ndvi data
-        #ndvi_masked.rio.to_raster(f'{output_dir_s}/ndvi_m_s.tif', driver='GTiff')
+        # ndvi_masked.rio.to_raster({filename_m_s}, driver='GTiff')
 
         # Save the monthly ndvi files
 
@@ -95,7 +99,7 @@ class Process:
             filename = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
-            image_ndvi.rio.to_raster(filename, driver='GTiff')
+            image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
             print(f"{filename} saved successfully")
         return
 
@@ -115,6 +119,7 @@ class Process:
         collections=["mxd13q1_viq_dekad"], #mxd13a2_vim_dekad_lta
         datetime=self.period).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
         res = 0.0022457882102988 # 250 or 0.01 for 1km
+        crs = rasterio.crs.CRS.from_epsg(4326)
         ndvi_anom = stac_load(query_ndvi_anom, patch_url=self.signer, output_crs='EPSG:4326',
                               resolution=res, bbox=self.bbox, chunks={})
         #ndvi_anom
@@ -147,6 +152,7 @@ class Process:
         #m_ndvi_lta_r
 
         s_ndvi_anom = m_ndvi_anom.mean(dim="time")
+        year = m_ndvi_anom.time.dt.year.item(0)
         #s_ndvi_anom
         image = s_ndvi_anom*0.01
 
@@ -166,11 +172,12 @@ class Process:
         # Create a mask where conditions are not met and set to 0 where conditions are met
         ndvi_anom_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), image, 0)
         ndvi_anom_masked = ndvi_anom_masked.drop_vars('spatial_ref')
+        # ndvi_anom_masked.set_crs(crs)
         #ndvi_anom_masked
 
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
 
-        filename_s = f'{output_dir_s}/ndvi_a_m.tif'
+        filename_s = f'{output_dir_s}/ndvi_a_m_{year}.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
@@ -181,6 +188,7 @@ class Process:
         s_ndvi_anom_max = m_ndvi_anom.max(dim="time")
         #s_ndvi_anom_max
         image_max = s_ndvi_anom_max*0.01
+        image_max.rio.set_crs(crs)
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
         filename_s_max = f'{output_dir_s}/ndvi_a_ma.tif'
         if not os.path.exists(output_dir_s):
@@ -353,6 +361,7 @@ class Process:
         #print(stac_items)
 
         res = 0.0022457882102988
+        crs = rasterio.crs.CRS.from_epsg(4326)
         chirps_an_stac = stac_load(chirps_an, output_crs='EPSG:4326', resolution= res,
                                    patch_url=self.signer, bbox=self.bbox)
         #CHIRPS_an_stac
@@ -385,22 +394,24 @@ class Process:
         #CHIRPS_an_s
 
         image_an = chirps_an_s
+        image_an.rio.set_crs(crs)
         output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
         filename_s = f'{output_dir_s}/rain_an_m.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
         # write the data to a geotiff file
-        image_an.rio.to_raster(filename_s, driver='GTiff')
+        image_an.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
         print(f'{filename_s} saved successfully')
 
         # Agreggate anomaly max data season
         chirps_an_s_max = chirps_an_m.max(dim='time')
         #CHIRPS_an_s_max
-        image_an_m = chirps_an_s_max # Rescaling applied here
+        image_an_m = chirps_an_s_max
+        image_an_m.rio.set_crs(crs)
         filename_s = f'{output_dir_s}/rain_an_ma.tif'
         # write the data to a geotiff file
-        image_an_m.rio.to_raster(filename_s, driver='GTiff')
+        image_an_m.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
         print(f'{filename_s} saved successfully')
 
         # Export the monthly anomaly data to GeoTiff files
@@ -415,12 +426,13 @@ class Process:
             month = time_val.dt.month.item()
             year = time_val.dt.year.item()
             da = chirps_an_m.sel(time=time_val)
+            da.rio.set_crs(crs)
 
             # create a file path for the geotiff file
             filename = f'{output_dir}/rain_a_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
-            da.rio.to_raster(filename, driver='GTiff')
+            da.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
             print(f'{filename} saved successfully')
         return
 
