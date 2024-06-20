@@ -70,7 +70,8 @@ elif pilot_num == "6":
     pilot = "LBN"
     point_shp = ""
     mask = gpd.read_file(f"C:/Geotar/{pilot}/geodata/Processed/Mask/{pilot}_mask.shp")
-    polygons_path = f"C:/Geotar/{pilot}/geodata/Raw/boundaries/lbn_bnd_cadastral_unhcr_wfpco.shp"
+    #polygons_path = f"C:/Geotar/{pilot}/geodata/Raw/boundaries/lbn_bnd_cadastral_unhcr_wfpco.shp"
+    polygons_path = 'zip://C:/Geotar/LBN/geodata/Raw/Co_data/lbn_bnd_cadastral_unhcr_wfpco.zip/lbn_bnd_cadastral_unhcr_wfpco.shp'
     print("You selected Lebanon")
 elif pilot_num == "7":
     pilot = "VEN"

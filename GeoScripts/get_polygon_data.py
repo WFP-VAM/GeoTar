@@ -205,7 +205,9 @@ class get_vectors:
         export_schools = export_schools[['osmid', 'amenity', 'name', 'geometry']]
         # Filter out geometries that are not points
         export_schools = export_schools[export_schools['geometry'].apply(lambda geom: geom.type == 'Point')]
-        school_file = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Education/{self.pilot_name}_education.shp"
+        if not os.path.exists(fr"C:/Geotar/{self.pilot_name}/geodata/Processed/Education"):
+            os.makedirs(rf"C:/Geotar/{self.pilot_name}/geodata/Processed/Education")
+        school_file = fr"C:/Geotar/{self.pilot_name}/geodata/Processed/Education/{self.pilot_name}_education.shp"
         export_schools.to_file(school_file)
         proximity_rasters(self.pilot_name, school_file, self.mask_shp, "education")
         return

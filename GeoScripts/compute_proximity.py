@@ -43,13 +43,15 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
         print(f'{dst_filename} exists, deleting...')
         drv = gdal.GetDriverByName('GTiff')
         drv.Delete(dst_filename)
+    if not os.path.exists(rf"C:/Geotar/{pilot_name}/geodata/Processed/250m"):
+        os.makedirs(f"C:/Geotrar/{pilot_name}/geodata/Processed/250m")
 
     # rasterize the vectori file with the spatial resolution defined
-    _ = gdal.Rasterize(dst_filename, clipped_shape, xRes=pixel_size, yRes=pixel_size,
+    ds = gdal.Rasterize(dst_filename, clipped_shape, xRes=pixel_size, yRes=pixel_size,
                         burnValues=1, outputBounds=[xmin, ymin, xmax, ymax],
                         outputType=gdal.GDT_Byte, allTouched=True)
-    #ds = None
-    #source_ds = None
+    ds = None
+    source_ds = None
 
     src_ds = gdal.Open(dst_filename)
 
@@ -84,9 +86,9 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
     prox = gdal.ComputeProximity(srcband, dstband, ["VALUES=1", "DISTUNITS=GEO"])
     print(f'{output} file processed')
     # close the input and output raster files and bands to free up memory
-    # srcband = None
-    # dstband = None
-    # src_ds = None
-    # dst_ds = None
-    # prox = None
+    srcband = None
+    dstband = None
+    src_ds = None
+    dst_ds = None
+    prox = None
     return

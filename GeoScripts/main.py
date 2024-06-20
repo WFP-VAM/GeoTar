@@ -68,10 +68,10 @@ masks = {
             "period": "2021-05-01/2022-01-31","country_name":"Iraq"},
     'LBN': {"pilot_name": "LBN",
             "mask_shp": f"C:/Geotar/LBN/geodata/processed/mask/LBN_mask.shp",
-            "period": "2023-10-01/2024-03-21","country_name":"Lebanon"},
+            "period": "2023-01-01/2023-05-31","country_name":"Lebanon"},
     'BGD': {"pilot_name": "BGD",
             "mask_shp": f"C:/Geotar/BGD/geodata/processed/mask/BGD_mask.shp",
-            "period": "2023-01-01/2023-12-31","country_name":"Bangladesh"},
+            "period": "2023-05-01/2023-12-31","country_name":"Bangladesh"},
     'ETH': {"pilot_name": "ETH",
             "mask_shp": f"C:/Geotar/ETH/geodata/processed/mask/ETH_mask.shp",
             "period": "2023-01-01/2023-12-31","country_name":"Ethiopia"},
@@ -136,7 +136,7 @@ if __name__ =='__main__':
                                  )
     # process_vector.get_roads()
     # process_vector.get_conflict()
-    # process_vector.get_schools()
-    process_vector.get_healthsites()
+    process_vector.get_schools()
+    # process_vector.get_healthsites()
 
 

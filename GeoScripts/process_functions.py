@@ -252,7 +252,7 @@ class Process:
             datetime= period,# '2022-01-01/2022-12-31'
         ).get_all_items()
 
-        res = 0.0022457882102988  #50.045454545Km #0.0022457882102988 # 250 or 0.01 for 1km
+        res= 0.0022457882102988  #50.045454545Km #0.0022457882102988 # 250 or 0.01 for 1km
 
         chirps_stac = stac_load(chirps, output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
         #chirps_stac
@@ -474,7 +474,7 @@ class Process:
             datetime= self.period #'2022-01-01/2022-12-31'
                                         ).get_all_items()
         res = 0.0022457882102988 # 250 or 0.01 for 1km
-        lst = stac_load(lst_query, output_crs='EPSG:4326', resolution= res, patch_url=self.signer, bbox=self.bbox)
+        lst = stac_load(lst_query, output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
         #lst
 
         # output_dir_zarr = f'C:/Geotar/{pilot_name}/geodata/zarr'
@@ -575,14 +575,14 @@ class Process:
                                         ).get_all_items()
         res = 0.0022457882102988 # 250 or 0.01 for 1km
         lst_anom = stac_load(lst_anom_query, output_crs='EPSG:4326',
-                             resolution= res , patch_url=self.signer, bbox=self.bbox)
+                             resolution=res, patch_url=self.signer, bbox=self.bbox)
         #lst_anom
 
     # group the lST anomaly data by month
         lst_an_m = lst_anom.drop('tnd')
         lst_an_m = lst_an_m.drop('spatial_ref')
         lst_an_m = lst_an_m.resample(time='1M').mean()
-        lst_an_m = lst_an_m  * 0.02
+        lst_an_m = lst_an_m*0.02
         #lst_an_m
 
         lst_an_s = lst_an_m.mean(dim='time')

@@ -397,7 +397,7 @@ def process_CHIRPS():
 
     res = 0.0022457882102988  #50.045454545Km #0.0022457882102988 # 250 or 0.01 for 1km
 
-    CHIRPS_stac = stac_load(CHIRPS, output_crs='EPSG:4326', resolution= res , patch_url=signer, bbox=bbox)
+    CHIRPS_stac = stac_load(CHIRPS, output_crs='EPSG:4326', resolution=res , patch_url=signer, bbox=bbox)
     CHIRPS_stac
 
 
@@ -485,8 +485,9 @@ def process_CHIRPS_Anomaly():
         datetime= period #'2022-01-01/2022-12-31',
     ).get_all_items()
     #print(stac_items)
+    res = 0.0022457882102988
 
-    CHIRPS_an_stac = stac_load(CHIRPS, output_crs='EPSG:4326', resolution= res , patch_url=signer, bbox=bbox)
+    CHIRPS_an_stac = stac_load(CHIRPS_an, output_crs='EPSG:4326', resolution=res , patch_url=signer, bbox=bbox)
     CHIRPS_an_stac
 
     # create a directory to store the geotiff files
@@ -643,20 +644,6 @@ def process_LST():
     LST.to_zarr(outfile)
     print(f'{outfile} saved')
 
-
-    LST_anom_query = hdc_stac_client.search(bbox=bbox,
-        #collections=['mod13q1_vim_native'],
-        collections=['myd11a2_txd_dekad'],
-        datetime= period #'2022-01-01/2022-12-31'
-                                    ).get_all_items()
-    res = 0.0022457882102988 # 250 or 0.01 for 1km
-    LST_anom = stac_load(LST_anom_query, output_crs='EPSG:4326', resolution= res , patch_url=signer, bbox=bbox)
-    LST_anom
-
-    output_dir_zarr = f'C:/Geotar/{pilot_name}/geodata/zarr'
-    outfile = output_dir_zarr + '/LST_an_stac.zarr'
-
-
     # create a directory to store the geotiff files
     if not os.path.exists(output_dir_zarr):
         os.makedirs(output_dir_zarr)
@@ -664,15 +651,6 @@ def process_LST():
     # Delete the existing Zarr file if it exists
     if os.path.exists(outfile):
         shutil.rmtree(outfile)
-
-    LST_anom.to_zarr(outfile)
-    print(f'{outfile} saved')
-
-
-    # Load xarray from zarr file (optional)
-
-    LST_anom= xr.open_zarr(outfile)
-    LST_anom
 
 
     # Group LST and LST anomalies by month
@@ -684,13 +662,6 @@ def process_LST():
     LST_m = (LST_m * 0.02)- 273.15
     LST_m
 
-    # group the lST anomaly data by month
-    LST_an_m = LST_anom.drop('tnd')
-    LST_an_m = LST_an_m.drop('spatial_ref')
-    LST_an_m = LST_an_m.groupby('time.month').mean('time')
-    LST_an_m = LST_an_m  * 0.02
-    #LST_an_m
-    LST_an_m
     return()
 
 process_LST()
@@ -699,6 +670,21 @@ process_LST()
 # Seasonal mean anomaly
 
 def process_LST_anomaly():
+    LST_anom_query = hdc_stac_client.search(bbox=bbox,
+                                            # collections=['mod13q1_vim_native'],
+                                            collections=['myd11a2_txd_dekad'],
+                                            datetime=period  # '2022-01-01/2022-12-31'
+                                            ).get_all_items()
+    res = 0.0022457882102988  # 250 or 0.01 for 1km
+    LST_anom = stac_load(LST_anom_query, output_crs='EPSG:4326', resolution=res, patch_url=signer, bbox=bbox)
+    LST_anom
+    # group the lST anomaly data by month
+    LST_an_m = LST_anom.drop('tnd')
+    LST_an_m = LST_an_m.drop('spatial_ref')
+    LST_an_m = LST_an_m.groupby('time.month').mean('time')
+    LST_an_m = LST_an_m  * 0.02
+    #LST_an_m
+    LST_an_m
 
     LST_an_s = LST_an_m.mean(dim=['month'])
 

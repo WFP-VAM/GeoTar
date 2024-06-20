@@ -313,6 +313,7 @@ def WorldcovertoMODIS(dst_file, tiffs_path):
     #print(mosaic_file_tif, "processed successfully")
     return(dst_file)
 
+out_file = f"C:/Geotar/{pilot_name}/geodata/Processed/LandCover/Worldcover_{pilot_name}.tif"
 WorldcovertoMODIS(out_file,output_folder)
 
 import shutil
