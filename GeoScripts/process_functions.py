@@ -103,8 +103,7 @@ class Process:
             print(f"{filename} saved successfully")
         return
 
-#
-#
+
     def process_ndvi_anomaly(self):
         """
             Fetches and computes the NDVI anomaly for the specified period.
@@ -190,7 +189,7 @@ class Process:
         image_max = s_ndvi_anom_max*0.01
         image_max.rio.set_crs(crs)
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
-        filename_s_max = f'{output_dir_s}/ndvi_a_ma.tif'
+        filename_s_max = f'{output_dir_s}/ndvi_a_ma{year}.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
@@ -288,6 +287,7 @@ class Process:
         #CHIRPS_m_s
 
         output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
+
         filename_m_s = f'{output_dir_s}/rain_m_s.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
@@ -324,7 +324,7 @@ class Process:
         #CHIRPS_s_s
 
         output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
-        filename_s_s = f'{output_dir_s}/rain_s_s.tif'
+        filename_s_s = f'{output_dir_s}/rain_s_s_{year}.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
@@ -409,10 +409,7 @@ class Process:
         #CHIRPS_an_s_max
         image_an_m = chirps_an_s_max
         image_an_m.rio.set_crs(crs)
-        filename_s = f'{output_dir_s}/rain_an_ma.tif'
-        # write the data to a geotiff file
-        image_an_m.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
-        print(f'{filename_s} saved successfully')
+
 
         # Export the monthly anomaly data to GeoTiff files
 
@@ -434,6 +431,11 @@ class Process:
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
             print(f'{filename} saved successfully')
+
+        filename_s = f'{output_dir_s}/rain_an_ma_{year}.tif'
+        # write the data to a geotiff file
+        image_an_m.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
+        print(f'{filename_s} saved successfully')
         return
 
 # # # Land Surface temperature processing
@@ -520,26 +522,12 @@ class Process:
         #lst_s
         image_m = lst_s # Rescaling applied here
         output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
-        filename_s = f'{output_dir_s}/LST_m.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
-
-        # write the data to a geotiff file
-        image_m.rio.to_raster(filename_s, driver='GTiff')
-        print(f'{filename_s} saved successfully')
 
         # Export the max seasonal temperature
         lst_s_max = lst_m.max(dim='time')
         #lst_s_max
         image_max = lst_s_max # Rescaling applied here
         output_dir_s_max = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
-        filename_s_max = f'{output_dir_s_max}/LST_ma.tif'
-        if not os.path.exists(output_dir_s_max):
-            os.makedirs(output_dir_s_max)
-
-        # write the data to a geotiff file
-        image_max.rio.to_raster(filename_s_max, driver='GTiff')
-        print(f'{filename_s_max} saved successfully')
 
         # create a directory to store the geotiff files
         output_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature'
@@ -558,6 +546,22 @@ class Process:
             # write the data to a geotiff file
             da.tda.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
+
+        filename_s_max = f'{output_dir_s_max}/LST_ma_{year}.tif'
+        if not os.path.exists(output_dir_s_max):
+            os.makedirs(output_dir_s_max)
+
+        # write the data to a geotiff file
+        image_max.rio.to_raster(filename_s_max, driver='GTiff')
+        print(f'{filename_s_max} saved successfully')
+
+        filename_s = f'{output_dir_s}/LST_m_{year}.tif'
+        if not os.path.exists(output_dir_s):
+            os.makedirs(output_dir_s)
+
+        # write the data to a geotiff file
+        image_m.rio.to_raster(filename_s, driver='GTiff')
+        print(f'{filename_s} saved successfully')
 
         return
 
@@ -599,12 +603,7 @@ class Process:
         # lst_an_s
 
         lst_an_s_max = lst_an_m.max(dim='time')
-        #lst_an_s_max
-        image_an_max = lst_an_s_max/100 # Rescaling applied here
-        filename_s_max = f'{output_dir_s}/LST_an_ma.tif'
-        # write the data to a geotiff file
-        image_an_max.rio.to_raster(filename_s_max, driver='GTiff')
-        print(f'{filename_s_max} saved successfully')
+
 
 
         # Export the monthly LST anomaly data to GeoTiff files
@@ -626,4 +625,11 @@ class Process:
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff')
             print(f'{filename} saved successfully')
+
+            # lst_an_s_max
+            image_an_max = lst_an_s_max / 100  # Rescaling applied here
+            filename_s_max = f'{output_dir_s}/LST_an_ma_{year}.tif'
+            # write the data to a geotiff file
+            image_an_max.rio.to_raster(filename_s_max, driver='GTiff')
+            print(f'{filename_s_max} saved successfully')
         return

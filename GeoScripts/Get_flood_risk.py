@@ -87,4 +87,4 @@ def get_flood_risk(mask_shp, pilot):
     print(f'mosaic saved as:{mosaic_path}')
     return
 
-get_flood_risk(f'C:/Geotar/SOM/geodata/Processed/Mask/SOM_mask.shp', 'SOM')
+get_flood_risk(f'C:/Geotar/BGD/geodata/Processed/Mask/BGD_mask.shp', 'BGD')
