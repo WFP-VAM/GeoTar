@@ -1,65 +1,47 @@
-# specify the path for the new folders
-parent_path = "C:\\Geotar"
-#subfolders = ["GLOBAL","COL", "CHAD", "IRAQ_N", "IRAQ_D", 'IRAQ']
+import boto3
+from botocore.exceptions import ClientError
 
 
+def create_s3_folder(bucket_name, folder_path):
+    s3 = boto3.client('s3')
+    try:
+        s3.put_object(Bucket=bucket_name, Key=('Geotar/' + folder_path + '/'))
+        print(f"Folder {folder_path} created successfully in bucket {bucket_name}")
+    except ClientError as error:
+        print(f"Creation of the folder {folder_path} failed: {error}")
 
 
-def stodarage_sctructure(iso3):
+def stodarage_structure_s3(bucket_name, iso3):
+    s3 = boto3.client('s3')
+
+    # Define the folder structure
     subfolders = [iso3]
-    # create the parent directory if it does not exist
-    if not os.path.exists(parent_path):
-        os.makedirs(parent_path)
 
-    # create the subfolders
     for folder in subfolders:
-        folder_path = os.path.join(parent_path, folder)
-        if not os.path.exists(folder_path):
-            try:
-                os.mkdir(folder_path)
-                print(f"Folder {folder} created successfully")
-            except OSError as error:
-                print(f"Creation of the folder {folder} failed: {error}")
-        else:
-            print(f"Folder {folder} already exists.")
+        folder_path = folder
+        create_s3_folder(bucket_name, folder_path)
 
-        # create subfolders under each geodata folder
-        geodata_path = os.path.join(folder_path, "geodata")
-        if not os.path.exists(geodata_path):
-            try:
-                os.mkdir(geodata_path)
-                print(f"Folder geodata created successfully under {folder_path}")
-            except OSError as error:
-                print(f"Creation of the folder geodata under {folder_path} failed: {error}")
-        else:
-            print(f"Folder geodata under {folder_path} already exists.")
+        geodata_path = f"{folder}/geodata"
+        create_s3_folder(bucket_name, geodata_path)
 
-        subfolders = ["Raw", "Processed", "workspace", "arcGIS", "outputs", "Docs"]
-        for subfolder in subfolders:
-            subfolder_path = os.path.join(geodata_path, subfolder)
-            if not os.path.exists(subfolder_path):
-                try:
-                    os.mkdir(subfolder_path)
-                    print(f"Folder {subfolder} created successfully under {geodata_path}")
-                except OSError as error:
-                    print(f"Creation of the folder {subfolder} under {geodata_path} failed: {error}")
-            else:
-                print(f"Folder {subfolder} under {geodata_path} already exists.")
+        subfolders_level_2 = ["Raw", "Processed", "workspace", "arcGIS", "outputs", "Docs"]
+        for subfolder in subfolders_level_2:
+            subfolder_path = f"{geodata_path}/{subfolder}"
+            create_s3_folder(bucket_name, subfolder_path)
 
-            # add subfolders to Raw and Processed folders
+            # Add subfolders to Raw and Processed folders
             if subfolder == "Raw" or subfolder == "Processed":
-                data_path = os.path.join(geodata_path, subfolder)
-                subfolders = ["Boundaries", "Roads", "Health", "Education", "Vegetation",
-                              "Precipitation", "Conflict", "Population", "Elevation",
-                              "Mask", "1K","250m", "NTL", "Temperature", "Buildings", 'LandCover']
-                for subfolder in subfolders:
-                    subsubfolder_path = os.path.join(data_path, subfolder)
-                    if not os.path.exists(subsubfolder_path):
-                        try:
-                            os.mkdir(subsubfolder_path)
-                            print(f"Folder {subfolder} created successfully under {data_path}")
-                        except OSError as error:
-                            print(f"Creation of the folder {subfolder} under {data_path} failed: {error}")
-                    else:
-                        print(f"Folder {subfolder} under {geodata_path} already exists.")
-    return()
+                data_path = f"{geodata_path}/{subfolder}"
+                subfolders_level_3 = ["Boundaries", "Roads", "Health", "Education", "Vegetation",
+                                      "Precipitation", "Conflict", "Population", "Elevation",
+                                      "Mask", "1K", "250m", "NTL", "Temperature", "Buildings", 'LandCover']
+                for subsubfolder in subfolders_level_3:
+                    subsubfolder_path = f"{data_path}/{subsubfolder}"
+                    create_s3_folder(bucket_name, subsubfolder_path)
+    return
+
+
+# Example usage
+bucket_name = 'geotar.s3.hq'
+iso3 = 'LBN'
+stodarage_structure_s3(bucket_name, iso3)
