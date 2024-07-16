@@ -2,14 +2,16 @@ import rasterio.crs
 from odc.stac import configure_rio, stac_load
 import xarray as xr
 import numpy as np
-import zarr
 import rioxarray
 from typing import List
 import os
 import datetime
 from dateutil.relativedelta import relativedelta
+import Storage_structure
+import World_cover
+import S3_functions
 
-
+bucket_name = 'geotar.s3.hq'
 class Process:
     def __init__(self, bbox: List, period: str, pilot_name: str, hdc_stac_client, signer):
 
@@ -48,17 +50,22 @@ class Process:
         # ndvi_m_s = ndvi_m_s.set_crs(crs)
         year = m_ndvi.time.dt.year.item(0)
 
+        s3_dir = f"{self.pilot_name}/geodata/Processed/vegetation/season"
+        create_s3_folder(bucket_name, s3_dir)
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/vegetation/season"
-        filename_m_s = f'{output_dir_s}/ndvi_m_s_{year}.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        filename_m_s = f"/vsimem/ndvi_m_s{year}.tif"
+
 
         # write the data to a geotiff file
-        ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff', crs='EPSG:4326')
-        print(f"{filename_m_s} saved successfully")
+        # ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff', crs='EPSG:4326')
+
+
+
+        # create landcover mask
+        World_cover.WorldcovertoMODIS(self.bbox,bucket_name,self.pilot_name)
 
         # Mask NDVI using land cover
-        tiff_path = f"C:/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
+        tiff_path = f"S3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
         mask_array = rioxarray.open_rasterio(tiff_path)
         mask_array = mask_array.squeeze("band", drop=True)
         mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
@@ -74,18 +81,21 @@ class Process:
         xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
         # Create a mask where conditions are not met and set to 0 where conditions are met
         ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
-        # ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
-        # ndvi_masked.set_crs(crs)
+        ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
+        ndvi_masked.set_crs(crs)
 
         # save the masked ndvi data
-        # ndvi_masked.rio.to_raster({filename_m_s}, driver='GTiff')
+        ndvi_masked.rio.to_raster(filename_m_s, driver='GTiff')
 
+        ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s.tif'
+        S3_functions.put_tif_to_S3(filename_m_s, ndvi_s3_key, bucket_name)
+        print(f"{filename_m_s} saved successfully")
+        gdal.Unlink(filename_m_s)
         # Save the monthly ndvi files
 
         # create a directory to store the geotiff files
-        output_dir = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        output_dir = f"/Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
+        # Storage_structure.create_s3_folder(bucket_name,output_dir)
 
         # loop over all timesteps in the dataset
         for time_val in m_ndvi.time:
@@ -96,11 +106,14 @@ class Process:
             image_ndvi = m_ndvi.sel(time=time_val)
 
             # create a file path for the geotiff file with both year and month in filename
-            filename = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
+            filename = f'vsimem/ndvi_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
             image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
+            key = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_S3(filename,key,bucket_name)
             print(f"{filename} saved successfully")
+            gdal.Unlink(filename)
         return
 
 #
