@@ -144,9 +144,9 @@ def get_admin_shapes(iso3: str, admin_level: int = 1):
 
 
 # Example usage
-bucket_name = "geotar.s3.hq"
-iso3 = "LBN"
-storage_structure_s3(bucket_name, iso3)
+# bucket_name = "geotar.s3.hq"
+# iso3 = "LBN"
+# storage_structure_s3(bucket_name, iso3)
 
 polygon = get_admin_shapes(iso3, 0)
 
