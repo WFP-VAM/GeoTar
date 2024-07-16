@@ -5,31 +5,29 @@ from typing import Any, Dict, Tuple, Union
 from shapely.geometry import Polygon, box
 import geopandas as gpd
 
-def folder_exists_s3(bucket_name, folder_path):
-    s3 = boto3.client('s3')
-    try:
-        s3.head_object(Bucket=bucket_name, Key=('Geotar/' + folder_path + '/'))
-        return True
-    except ClientError as e:
-        if e.response['Error']['Code'] == '404':
-            return False
-        else:
-            raise
-
 
 def create_s3_folder(bucket_name, folder_path):
-    if folder_exists_s3(bucket_name, folder_path):
+    s3 = boto3.client('s3')
+    key = 'Geotar/' + folder_path + '/'
+
+    # Check if the folder exists
+    try:
+        s3.head_object(Bucket=bucket_name, Key=key)
         print(f"Folder {folder_path} already exists in bucket {bucket_name}")
         return  # Stop the current process if the folder exists
-    s3 = boto3.client('s3')
+    except ClientError as e:
+        if e.response['Error']['Code'] != '404':
+            raise  # If the error is not '404 Not Found', re-raise the exception
+
+    # Create the folder if it doesn't exist
     try:
-        s3.put_object(Bucket=bucket_name, Key=('Geotar/' + folder_path + '/'))
+        s3.put_object(Bucket=bucket_name, Key=key)
         print(f"Folder {folder_path} created successfully in bucket {bucket_name}")
     except ClientError as error:
         print(f"Creation of the folder {folder_path} failed: {error}")
 
 
-def stodarage_structure_s3(bucket_name:str, iso3:str):
+def storage_structure_s3(bucket_name:str, iso3:str):
     s3 = boto3.client('s3')
 
     # Define the folder structure
@@ -148,7 +146,7 @@ def get_admin_shapes(iso3: str, admin_level: int = 1):
 # Example usage
 bucket_name = "geotar.s3.hq"
 iso3 = "LBN"
-stodarage_structure_s3(bucket_name, iso3)
+storage_structure_s3(bucket_name, iso3)
 
 polygon = get_admin_shapes(iso3, 0)
 
