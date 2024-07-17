@@ -50,22 +50,15 @@ class Process:
         # ndvi_m_s = ndvi_m_s.set_crs(crs)
         year = m_ndvi.time.dt.year.item(0)
 
-        s3_dir = f"{self.pilot_name}/geodata/Processed/vegetation/season"
+        s3_dir = f"{self.pilot_name}/geodata/Processed/Vegetation/season"
         create_s3_folder(bucket_name, s3_dir)
-        output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/vegetation/season"
         filename_m_s = f"/vsimem/ndvi_m_s{year}.tif"
-
-
-        # write the data to a geotiff file
-        # ndvi_m_s.rio.to_raster(filename_m_s, driver='GTiff', crs='EPSG:4326')
-
-
 
         # create landcover mask
         World_cover.WorldcovertoMODIS(self.bbox,bucket_name,self.pilot_name)
 
         # Mask NDVI using land cover
-        tiff_path = f"S3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
+        tiff_path = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
         mask_array = rioxarray.open_rasterio(tiff_path)
         mask_array = mask_array.squeeze("band", drop=True)
         mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
