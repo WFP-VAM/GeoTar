@@ -76,19 +76,19 @@ class Process:
         # Create a mask where conditions are not met and set to 0 where conditions are met
         ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
         ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
-        ndvi_masked.set_crs(crs)
+        ndvi_masked.rio.write_crs("epsg:4326")
 
         # save the masked ndvi data
         ndvi_masked.rio.to_raster(filename_m_s, driver='GTiff')
 
         ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s_{year}.tif'
-        S3_functions.put_tif_to_S3(filename_m_s, ndvi_s3_key, bucket_name)
+        S3_functions.put_tif_to_s3(filename_m_s, ndvi_s3_key, bucket_name)
         print(f"{filename_m_s} saved successfully")
         gdal.Unlink(filename_m_s)
         # Save the monthly ndvi files
 
         # create a directory to store the geotiff files
-        output_dir = f"/Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
+        output_dir = f"Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
         # Storage_structure.create_s3_folder(bucket_name,output_dir)
 
         # loop over all timesteps in the dataset
@@ -105,7 +105,7 @@ class Process:
             # write the data to a geotiff file
             image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
             key = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
-            S3_functions.put_tif_to_S3(filename,key,bucket_name)
+            S3_functions.put_tif_to_s3(filename,key,bucket_name)
             print(f"{filename} saved successfully")
             gdal.Unlink(filename)
         return
@@ -120,34 +120,13 @@ class Process:
              - raster file with the maximum NDVI anomaly for the period selected.
             """
         print("Processing NDVI anomalies")
-        #lt_dates = "2002-07-01/2018-07-01"
         query_ndvi_anom = self.hdc_stac_client.search(bbox=self.bbox,
-        #collections=["mod13q1_vim_native"],
-        collections=["mxd13q1_viq_dekad"], #mxd13a2_vim_dekad_lta
-        datetime=self.period).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
-        res = 0.0022457882102988 # 250 or 0.01 for 1km
+                                                      collections=["mxd13q1_viq_dekad"],
+                                                      datetime=self.period).get_all_items()  # 1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
+        res = 0.0022457882102988  # 250 or 0.01 for 1km
         crs = rasterio.crs.CRS.from_epsg(4326)
         ndvi_anom = stac_load(query_ndvi_anom, patch_url=self.signer, output_crs='EPSG:4326',
-                              resolution=res, bbox=self.bbox, chunks={})
-        #ndvi_anom
-        # create a directory to store the geotiff files
-        # output_dir_zarr = f"C:/Geotar/{self.pilot_name}/geodata/zarr"
-        # if not os.path.exists(output_dir_zarr):
-        #     os.makedirs(output_dir_zarr)
-        #     outfile = output_dir_zarr + "/ndvi_an_stac.zarr"
-
-        # Delete the existing Zarr store if it exists
-        # if os.path.exists(outfile):
-        #     shutil.rmtree(outfile)
-
-        # ndvi_anom.to_zarr(outfile)
-        # print(f"{outfile} saved")
-
-        # output_dir_zarr = f"C:/Geotar/{self.pilot_name}/geodata/zarr"
-        # outfile_zarr = output_dir_zarr + "/ndvi_an_stac.zarr"
-        # #Load zarr file containing NDVI anomaly dekadal data for the season
-        # ndvi_anom = xr.open_zarr(outfile_zarr)
-        # ndvi_anom
+                              resolution=res, bbox=self.bbox)
 
         # Mask out no data/extreme values
         ndvi_anom_masked = xr.where(ndvi_anom < -150, np.nan, ndvi_anom)
@@ -155,16 +134,16 @@ class Process:
         # Group the data by month
 
         m_ndvi_anom = ndvi_anom_masked.resample(time='1M').mean()
-        m_ndvi_lta_r = m_ndvi_anom #/100  this rescaling is not working
-        #m_ndvi_lta_r
+        m_ndvi_lta_r = m_ndvi_anom  # /100  this rescaling is not working
+        # m_ndvi_lta_r
 
         s_ndvi_anom = m_ndvi_anom.mean(dim="time")
         year = m_ndvi_anom.time.dt.year.item(0)
-        #s_ndvi_anom
-        image = s_ndvi_anom*0.01
+        # s_ndvi_anom
+        image = s_ndvi_anom * 0.01
 
         # Mask NDVI anomaly using land cover
-        cover_path = f'C:/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif'
+        cover_path = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
         mask_array = rioxarray.open_rasterio(cover_path)
         mask_array = mask_array.squeeze("band", drop=True)
         mask_array = mask_array.rename({'x': 'longitude', 'y': 'latitude'})
@@ -179,37 +158,34 @@ class Process:
         # Create a mask where conditions are not met and set to 0 where conditions are met
         ndvi_anom_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), image, 0)
         ndvi_anom_masked = ndvi_anom_masked.drop_vars('spatial_ref')
-        # ndvi_anom_masked.set_crs(crs)
-        #ndvi_anom_masked
+        ndvi_anom_masked.rio.write_crs("epsg:4326")
+        # ndvi_anom_masked
 
-        output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
-
-        filename_s = f'{output_dir_s}/ndvi_a_m_{year}.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        filename_s = f'/vsimem/ndvi_a_m_{year}.tif'
+        output_dir = f"Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
 
         # write the data to a geotiff file
         ndvi_anom_masked.rio.to_raster(filename_s, driver='GTiff', band_indices=[1], mask_and_scale=True)
-        print(f"{filename_s} saved successfully")
+        # print(f"{filename_s} saved successfully")
+        key_ndvi_anom_m = f'{output_dir}/ndvi_a_m_{year}.tif'
+        S3_functions.put_tif_to_S3(filename_s, key_ndvi_anom_m, bucket_name)
 
         s_ndvi_anom_max = m_ndvi_anom.max(dim="time")
-        #s_ndvi_anom_max
-        image_max = s_ndvi_anom_max*0.01
-        image_max.rio.set_crs(crs)
-        output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
-        filename_s_max = f'{output_dir_s}/ndvi_a_ma.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        # s_ndvi_anom_max
+        image_max = s_ndvi_anom_max * 0.01
+        image_max.rio.write_crs("epsg:4326")
+
+        filename_s_max = f'/vsimem/ndvi_a_ma.tif'
 
         # write the data to a geotiff file
         image_max.rio.to_raster(filename_s_max, driver='GTiff')
+        key_ndvi_anom_max = f'{output_dir}/ndvi_a_max_{year}.tif'
+        S3_functions.put_tif_to_S3(filename_s_max, key_ndvi_anom_max, bucket_name)
         print(f"{filename_s_max} saved successfully")
 
         # Exports a geotiff file for each date
         # create a directory to store the geotiff files
-        output_dir = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        output_dir_month = f"Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
 
         # loop over all timesteps in the dataset
         for time_val in m_ndvi_lta_r.time:
@@ -218,11 +194,14 @@ class Process:
             # Extract a single timestep as a DataArray
             image = m_ndvi_lta_r.sel(time=time_val)  # Squeeze to remove unnecessary dimensions
             # create a file path for the geotiff file
-            filename = f'{output_dir}/ndvi_a_{year}_{month:02d}.tif'
+            filename_month = f'/vsimem/ndvi_a_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
-            image.rio.to_raster(filename, driver='GTiff')
-            print(f"{filename} saved successfully")
+            image.rio.to_raster(filename_month, driver='GTiff')
+            key_anom_month = f'{output_dir_month}/ndvi_a_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_S3(filename_month, key_anom_month, bucket_name)
+
+            # print(f"{filename} saved successfully")
         return
 
     def process_CHIRPS(self):
