@@ -392,6 +392,7 @@ class Process:
         print("Processing Land surface temperature")
 
         # print the NDVI period:
+        print()
         print("CHIRPS period:", self.period)
         # Convert the period string to datetime objects
         start_date, end_date = self.period.split('/')
@@ -412,49 +413,42 @@ class Process:
         print("LST period:", period)
 
         lst_query = self.hdc_stac_client.search(bbox=self.bbox,
-            #collections=['mod13q1_vim_native'],
-            collections=['myd11a2_txa_dekad'],
-            datetime= self.period #'2022-01-01/2022-12-31'
-                                        ).get_all_items()
-        res = 0.0022457882102988 # 250 or 0.01 for 1km
-        lst = stac_load(lst_query, output_crs='EPSG:4326', resolution= res, patch_url=self.signer, bbox=self.bbox)
-
+                                                # collections=['mod13q1_vim_native'],
+                                                collections=['myd11a2_txa_dekad'],
+                                                datetime=self.period  # '2022-01-01/2022-12-31'
+                                                ).get_all_items()
+        res = 0.0022457882102988  # 250 or 0.01 for 1km
+        lst = stac_load(lst_query, output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
 
         # group the lST data by month
         lst_m = lst.drop('tna')
         lst_m = lst_m.drop('spatial_ref')
         lst_m = lst_m.resample(time='1M').mean()
         lst_m = (lst_m * 0.02) - 273.15
-
+        year = lst_m.time.dt.year.item(0)
         lst_s = lst_m.mean(dim='time')
 
-        image_m = lst_s
         output_dir_s = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
-        filename_s = f'{output_dir_s}/LST_m.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        filename_s = f'/vsimem/LST_m_{year}.tif'
+        Storage_structure.create_s3_folder(bucket_name, output_dir_s)
 
         # write the data to a geotiff file
-        image_m.rio.to_raster(filename_s, driver='GTiff')
-        print(f'{filename_s} saved successfully')
+        lst_s.rio.to_raster(filename_s, driver='GTiff')
+        lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season/LST_m_{year}.tif'
+        S3_functions.put_tif_to_s3(filename_s, lst_s3_key, bucket_name)
+        gdal.Unlink(filename_s)
 
         # Export the max seasonal temperature
         lst_s_max = lst_m.max(dim='time')
-        #lst_s_max
-        image_max = lst_s_max # Rescaling applied here
-        output_dir_s_max = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
-        filename_s_max = f'{output_dir_s_max}/LST_ma.tif'
-        if not os.path.exists(output_dir_s_max):
-            os.makedirs(output_dir_s_max)
+        # lst_s_max
+        image_max = lst_s_max
+        filename_s_max = f'/vsimem/LST_max_{year}.tif'
 
         # write the data to a geotiff file
-        image_max.rio.to_raster(filename_s_max, driver='GTiff')
-        print(f'{filename_s_max} saved successfully')
-
-        # create a directory to store the geotiff files
-        output_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        lst_s_max.rio.to_raster(filename_s_max, driver='GTiff')
+        max_lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season/LST_max_{year}.tif'
+        S3_functions.put_tif_to_s3(filename_s_max, max_lst_s3_key, bucket_name)
+        gdal.Unlink(filename_s_max)
 
         # loop over all timesteps in the dataset
         for time_val in lst_m.time:
@@ -464,10 +458,13 @@ class Process:
             da = lst_m.sel(time=time_val)
 
             # create a file path for the geotiff file
-            filename = f'{output_dir}/LST_{year}_{month:02d}.tif'
+            filename = f'/vsimem/LST_{year}_{month:02d}.tif'
             # write the data to a geotiff file
             da.tda.rio.to_raster(filename, driver='GTiff')
-            print(f'{filename} saved successfully')
+
+            month_lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/LST_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_s3(filename, month_lst_s3_key, bucket_name)
+            gdal.Unlink(filename)
 
         return
 
@@ -479,50 +476,46 @@ class Process:
         """
         print("Processing Land surface temperature anomalies")
         lst_anom_query = self.hdc_stac_client.search(bbox=self.bbox,
-            #collections=['mod13q1_vim_native'],
-            collections=['myd11a2_txd_dekad'],
-            datetime= self.period #'2022-01-01/2022-12-31'
-                                        ).get_all_items()
-        res = 0.0022457882102988 # 250 or 0.01 for 1km
+                                                     # collections=['mod13q1_vim_native'],
+                                                     collections=['myd11a2_txd_dekad'],
+                                                     datetime=self.period  # '2022-01-01/2022-12-31'
+                                                     ).get_all_items()
+        res = 0.0022457882102988  # 250 or 0.01 for 1km
         lst_anom = stac_load(lst_anom_query, output_crs='EPSG:4326',
-                             resolution= res , patch_url=self.signer, bbox=self.bbox)
-        #lst_anom
+                             resolution=res, patch_url=self.signer, bbox=self.bbox)
+        # lst_anom
 
-    # group the lST anomaly data by month
+        # group the lST anomaly data by month
         lst_an_m = lst_anom.drop('tnd')
         lst_an_m = lst_an_m.drop('spatial_ref')
         lst_an_m = lst_an_m.resample(time='1M').mean()
-        lst_an_m = lst_an_m  * 0.02
-        #lst_an_m
+        lst_an_m = lst_an_m * 0.02
+        year = lst_an_m.time.dt.year.item(0)
 
         lst_an_s = lst_an_m.mean(dim='time')
 
         image_an = lst_an_s / 100  # Rescaling applied here
-        output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
-        filename_s = f'{output_dir_s}/LST_an_m.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        output_dir_s = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
+        lst_anomaly_mean = f'/vsimem/LST_an_m_{year}.tif'
 
         # write the data to a geotiff file
-        image_an.rio.to_raster(filename_s, driver='GTiff')
-        print(f'{filename_s} saved successfully')
-        # lst_an_s
+        image_an.rio.to_raster(lst_anomaly_mean, driver='GTiff')
+
+        lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season/LST_an_m_{year}.tif'
+        S3_functions.put_tif_to_s3(lst_anomaly_mean, lst_s3_key, bucket_name)
+        gdal.Unlink(lst_anomaly_mean)
 
         lst_an_s_max = lst_an_m.max(dim='time')
-        #lst_an_s_max
-        image_an_max = lst_an_s_max/100 # Rescaling applied here
-        filename_s_max = f'{output_dir_s}/LST_an_ma.tif'
+        # lst_an_s_max
+        image_an_max = lst_an_s_max / 100  # Rescaling applied here
+        filename_s_max = f'/vsimem/LST_an_max_{year}.tif'
         # write the data to a geotiff file
         image_an_max.rio.to_raster(filename_s_max, driver='GTiff')
-        print(f'{filename_s_max} saved successfully')
-
+        max_lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season/LST_an_max_{year}.tif'
+        S3_functions.put_tif_to_s3(filename_s_max, max_lst_s3_key, bucket_name)
+        gdal.Unlink(filename_s_max)
 
         # Export the monthly LST anomaly data to GeoTiff files
-
-        # create a directory to store the geotiff files
-        output_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
 
         # loop over all timesteps in the dataset
         for time_val in lst_an_m.time:
@@ -531,9 +524,11 @@ class Process:
             # extract a single timestep as a DataArray
             da = lst_an_m.sel(time=time_val)
             # create a file path for the geotiff file
-            filename = f'{output_dir}/LST_an_{year}_{month:02d}.tif'
+            filename = f'/vsimem/LST_an_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff')
-            print(f'{filename} saved successfully')
+            month_lst_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/LST_an_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_s3(filename, month_lst_s3_key, bucket_name)
+            gdal.Unlink(filename)
         return
