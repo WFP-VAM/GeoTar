@@ -8,6 +8,7 @@ import os
 from process_functions import *
 from get_polygon_data import *
 #from prox_GDAL import *
+import S3_paths
 
 
 root = pathlib.Path().resolve().parent.parent
@@ -15,7 +16,27 @@ root
 
 TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
 HDC_STAC_URL= "https://api.earthobservation.vam.wfp.org/stac/"
+def replace_local_to_s3(data):
+  """
+  Replaces local file paths with S3 paths in a dictionary.
 
+  Args:
+      data: The dictionary containing data with local file paths.
+
+  Returns:
+      A new dictionary with S3 paths replacing the local paths.
+  """
+  new_data = {}
+  for key, value in data.items():
+    new_value = {}
+    for inner_key, inner_value in value.items():
+      if inner_key == "mask_shp":
+        # Replace local path with S3 path
+        new_value[inner_key] = f"s3://geotar.s3.hq/{inner_value.split('/')[-2:]}"
+      else:
+        new_value[inner_key] = inner_value
+    new_data[key] = new_value
+  return new_data
 
 def _get_hdc_stac_param_from_env():
 
@@ -55,35 +76,38 @@ def _get_hdc_stac_param_from_env():
 
 masks = {
     'GLOBAL': { "pilot_name" : "GLOBAL'",
-            "mask_shp" : f"C:/Geotar/GLOBAL/geodata/workspace/test_mask.shp",
+            "mask_shp" : f"C:/Geotar/GLOBAL/geodata/workspace/test_mask.geojson",
             "period" : "2021-05-01/2022-01-31", 'country_name':'All Countries'},
     'COL': {"pilot_name" : "COL",
-            "mask_shp" : f"C:/Geotar/COL/geodata/processed/mask/COL_mask.shp",
+            "mask_shp" : f"C:/Geotar/COL/geodata/processed/mask/COL_mask.geojson",
             "period" : "2021-05-01/2022-01-31", "country_name":"Colombia"},
     'CHAD': {"pilot_name": "CHAD",
-            "mask_shp": f"C:/Geotar/CHAD/geodata/processed/mask/CHAD_mask.shp",
+            "mask_shp": f"C:/Geotar/CHAD/geodata/processed/mask/CHAD_mask.geojson",
             "period": "2023-06-01/2023-08-30","country_name":"Chad"},
     'IRAQ': {"pilot_name": "IRAQ",
-            "mask_shp": f"C:/Geotar/IRAQ/geodata/processed/mask/IRAQ_mask.shp",
+            "mask_shp": f"C:/Geotar/IRAQ/geodata/processed/mask/IRAQ_mask.geojson",
             "period": "2021-05-01/2022-01-31","country_name":"Iraq"},
     'LBN': {"pilot_name": "LBN",
-            "mask_shp": f"C:/Geotar/LBN/geodata/processed/mask/LBN_mask.shp",
+            "mask_shp": f"C:/Geotar/LBN/geodata/processed/mask/LBN_mask.geojson",
             "period": "2023-10-01/2024-03-21","country_name":"Lebanon"},
     'BGD': {"pilot_name": "BGD",
-            "mask_shp": f"C:/Geotar/BGD/geodata/processed/mask/BGD_mask.shp",
+            "mask_shp": f"C:/Geotar/BGD/geodata/processed/mask/BGD_mask.geojson",
             "period": "2023-01-01/2023-12-31","country_name":"Bangladesh"},
     'ETH': {"pilot_name": "ETH",
-            "mask_shp": f"C:/Geotar/ETH/geodata/processed/mask/ETH_mask.shp",
+            "mask_shp": f"C:/Geotar/ETH/geodata/processed/mask/ETH_mask.geojson",
             "period": "2023-01-01/2023-12-31","country_name":"Ethiopia"},
     'SOM': {"pilot_name": "SOM",
-            "mask_shp": f"C:/Geotar/SOM/geodata/processed/mask/SOM_mask.shp",
+            "mask_shp": f"C:/Geotar/SOM/geodata/processed/mask/SOM_mask.geojson",
             "period": "2023-01-01/2023-12-31","country_name":"Somalia"},
     'VEN': {"pilot_name": "VEN",
-            "mask_shp": f"C:/Geotar/VEN/geodata/processed/mask/VEN_mask.shp",
+            "mask_shp": f"C:/Geotar/VEN/geodata/processed/mask/VEN_mask.geojson",
             "period": "2023-01-01/2023-12-31","country_name":"Venezuela"},
+    'AFG': {"pilot_name": "AFG",
+            "mask_shp": f"C:/Geotar/AFG/geodata/processed/mask/AFG_mask.geojson",
+            "period": "2023-04-01/2023-07-30","country_name":"Afghanistan"},
 }
 
-
+masks = S3_paths.replace_local_to_s3(masks.copy())
 
 if __name__ =='__main__':
 
@@ -99,6 +123,7 @@ if __name__ =='__main__':
     print('5. IRAQ')
     print('6. LBN')
     print('7. VEN')
+    print('8. AFG')
     print('9. SOM')
     print('10. BGD')
     print('11. ETH')
@@ -121,7 +146,7 @@ if __name__ =='__main__':
                   pilot_name=pilot_name,
                   hdc_stac_client=hdc_stac_client,
                   signer=signer)
-    # process_obj.process_ndvi()
+    process_obj.process_ndvi()
     # process_obj.process_ndvi_anomaly()
     # process_obj.process_CHIRPS()
     # process_obj.process_CHIRPS_Anomaly()
@@ -137,6 +162,6 @@ if __name__ =='__main__':
     # process_vector.get_roads()
     # process_vector.get_conflict()
     # process_vector.get_schools()
-    process_vector.get_healthsites()
+    # process_vector.get_healthsites()
 
 
