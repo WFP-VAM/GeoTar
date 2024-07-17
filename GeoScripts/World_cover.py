@@ -9,12 +9,12 @@ import json
 from S3_functions import put_tif_to_S3
 
 
-def WorldcovertoMODIS(mask_shp, bucket_name, iso3):
-    area_shp = gpd.read_file(mask_shp)
+def WorldcovertoMODIS(bbox, bucket_name, iso3):
+    # area_shp = gpd.read_file(mask_shp)
 
     # Get the bounding box of the shapefile
-    bbox = area_shp.total_bounds
-    bbox
+    # bbox = area_shp.total_bounds
+    # bbox
     # ## Create reference raster from MODIS stored in HDC
 
     TOKEN_PATH = "C:/Users/oscar.bautista/OneDrive - World Food Programme/Scripts/tk.json"
@@ -171,6 +171,4 @@ def WorldcovertoMODIS(mask_shp, bucket_name, iso3):
 
     return
 
-import shutil
-shutil.rmtree(output_folder)
 
