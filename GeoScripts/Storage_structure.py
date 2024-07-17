@@ -164,8 +164,8 @@ def generate_bbox(polygon, iso3):
     bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_polygon], crs=polygon.crs)
 
     # Save the GeoDataFrame to a GeoJSON file
-    bbox_gdf.to_file(f"s3://geotar.s3.hq/Geotar/{iso3}/geodata/Processed/Mask/{iso3}_Mask.geojson", driver="GeoJSON")
-    print(f"mask file {iso3}_Mask.geojson created")
+    bbox_gdf.to_file(f"s3://geotar.s3.hq/Geotar/{iso3}/geodata/Processed/Mask/{iso3}_mask.geojson", driver="GeoJSON")
+    print(f"mask file {iso3}_mask.geojson created")
     return
 
 def create_new_country(bucket_name, iso3):
