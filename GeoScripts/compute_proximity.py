@@ -2,28 +2,9 @@ import geopandas as gpd
 from osgeo import gdal, ogr
 import boto3
 import os
+from S3_functions import put_tif_to_s3
 
 
-def check_and_delete_s3_object(bucket_name, key):
-    # Initialize a session using Amazon S3
-    s3_client = boto3.client('s3')
-
-    # Check if the object exists in S3
-    try:
-        s3_client.head_object(Bucket=bucket_name, Key=key)
-        print(f'{key} exists in bucket {bucket_name}, deleting...')
-
-        # Delete the object
-        s3_client.delete_object(Bucket=bucket_name, Key=key)
-
-
-    except s3_client.exceptions.ClientError as e:
-        # If a 404 error is raised, the object does not exist
-        if e.response['Error']['Code'] == '404':
-            print(f'{key} does not exist in bucket {bucket_name}')
-        else:
-            # Something else has gone wrong.
-            raise
 
 
 def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: str):
@@ -122,23 +103,9 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
     # and write the resulting distances to the output raster file
     prox = gdal.ComputeProximity(srcband, dstband, ["VALUES=1", "DISTUNITS=GEO"])
 
-    def put_tif_from_gdal_mem_dataset(key, bucket_name):
-        # Load the dataset into the virtual filesystem
-        temp_name = f"/vsimem/dist_{out_name}.tif"
-        # Read the raw data from the virtual filesystem
-        f = gdal.VSIFOpenL(temp_name, 'rb')
-        gdal.VSIFSeekL(f, 0, 2)  # seek to end
-        size = gdal.VSIFTellL(f)
-        gdal.VSIFSeekL(f, 0, 0)  # seek to beginning
-        data = gdal.VSIFReadL(1, size, f)
-        gdal.VSIFCloseL(f)
-        # Upload the raw data to s3
-        boto3.client('s3').put_object(Key=key, Bucket=bucket_name, Body=data, ContentLength=size)
-        gdal.Unlink(temp_name)
 
-    gdal.Unlink(output)
 
-    put_tif_from_gdal_mem_dataset(f'Geotar/{pilot_name}/geodata/Processed/250m/dist_{out_name}.tif', 'geotar.s3.hq')
+    put_tif_to_s3(f"/vsimem/dist_{out_name}.tif",f'Geotar/{pilot_name}/geodata/Processed/250m/dist_{out_name}.tif', 'geotar.s3.hq')
 
     print(f'{output} file processed')
     # close the input and output raster files and bands to free up memory

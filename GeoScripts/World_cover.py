@@ -6,7 +6,7 @@ from pystac_client import Client
 from odc.stac import configure_rio, stac_load
 import os
 import json
-from S3_functions import put_tif_to_S3
+from S3_functions import put_tif_to_s3
 
 
 def WorldcovertoMODIS(bbox, bucket_name, iso3):

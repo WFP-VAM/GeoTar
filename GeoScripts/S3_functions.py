@@ -11,7 +11,7 @@ import time
 # Specify the S3 client with a specific configuration
 s3_client = boto3.client('s3', region_name='eu-central-1', config=Config(retries={'max_attempts': 10, 'mode': 'standard'}))
 
-def put_tif_to_S3(in_file, key, bucket_name, retries=3):
+def put_tif_to_s3(in_file, key, bucket_name, retries=3):
     # Load the dataset into the virtual filesystem
     temp_name = in_file
     # Read the raw data from the virtual filesystem
@@ -34,3 +34,24 @@ def put_tif_to_S3(in_file, key, bucket_name, retries=3):
                 else:
                     raise e
     gdal.Unlink(temp_name)
+
+def check_and_delete_s3_object(bucket_name, key):
+    # Initialize a session using Amazon S3
+    s3_client = boto3.client('s3')
+
+    # Check if the object exists in S3
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=key)
+        print(f'{key} exists in bucket {bucket_name}, deleting...')
+
+        # Delete the object
+        s3_client.delete_object(Bucket=bucket_name, Key=key)
+
+
+    except s3_client.exceptions.ClientError as e:
+        # If a 404 error is raised, the object does not exist
+        if e.response['Error']['Code'] == '404':
+            print(f'{key} does not exist in bucket {bucket_name}')
+        else:
+            # Something else has gone wrong.
+            raise

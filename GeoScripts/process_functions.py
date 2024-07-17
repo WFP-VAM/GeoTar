@@ -164,7 +164,7 @@ class Process:
         ndvi_anom_masked.rio.to_raster(filename_s, driver='GTiff', band_indices=[1], mask_and_scale=True)
         # print(f"{filename_s} saved successfully")
         key_ndvi_anom_m = f'{output_dir}/ndvi_a_m_{year}.tif'
-        S3_functions.put_tif_to_S3(filename_s, key_ndvi_anom_m, bucket_name)
+        S3_functions.put_tif_to_s3(filename_s, key_ndvi_anom_m, bucket_name)
 
         s_ndvi_anom_max = m_ndvi_anom.max(dim="time")
         # s_ndvi_anom_max
@@ -176,7 +176,7 @@ class Process:
         # write the data to a geotiff file
         image_max.rio.to_raster(filename_s_max, driver='GTiff')
         key_ndvi_anom_max = f'{output_dir}/ndvi_a_max_{year}.tif'
-        S3_functions.put_tif_to_S3(filename_s_max, key_ndvi_anom_max, bucket_name)
+        S3_functions.put_tif_to_s3(filename_s_max, key_ndvi_anom_max, bucket_name)
         print(f"{filename_s_max} saved successfully")
 
         # Exports a geotiff file for each date
@@ -195,7 +195,7 @@ class Process:
             # write the data to a geotiff file
             image.rio.to_raster(filename_month, driver='GTiff')
             key_anom_month = f'{output_dir_month}/ndvi_a_{year}_{month:02d}.tif'
-            S3_functions.put_tif_to_S3(filename_month, key_anom_month, bucket_name)
+            S3_functions.put_tif_to_s3(filename_month, key_anom_month, bucket_name)
 
             # print(f"{filename} saved successfully")
         return

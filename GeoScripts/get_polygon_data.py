@@ -9,13 +9,14 @@ import os
 from compute_proximity import proximity_rasters
 
 class get_vectors:
-    def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str):
+    def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str, root: str):
 
         self.bbox=bbox
         self.period=period
         self.pilot_name=pilot_name
         self.country_name = country_name
         self.mask_shp = mask_shp
+        self.root = root
         #self.hdc_stac_client=hdc_stac_client
         #self.signer=signer
 
@@ -25,10 +26,10 @@ class get_vectors:
         :return:
         returns the roads dataset for the mask area and saves it in the data folder
         """
-        base_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Roads'
+        base_dir = f'{root}Geotar/{self.pilot_name}/geodata/Processed/Roads'
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
-        output_file = os.path.normpath(os.path.join(base_dir, 'roads.shp'))
+        output_file = os.path.normpath(os.path.join(base_dir, 'roads.geojson'))
         if not os.path.exists(output_file):
             print('Fetching Roads')
 
