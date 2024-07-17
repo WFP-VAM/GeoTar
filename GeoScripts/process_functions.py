@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta
 import Storage_structure
 import World_cover
 import S3_functions
+from osgeo import gdal
 
 bucket_name = 'geotar.s3.hq'
 class Process:
@@ -80,7 +81,7 @@ class Process:
         # save the masked ndvi data
         ndvi_masked.rio.to_raster(filename_m_s, driver='GTiff')
 
-        ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s.tif'
+        ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s_{year}.tif'
         S3_functions.put_tif_to_S3(filename_m_s, ndvi_s3_key, bucket_name)
         print(f"{filename_m_s} saved successfully")
         gdal.Unlink(filename_m_s)
