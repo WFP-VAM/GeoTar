@@ -5,6 +5,9 @@ from typing import Any, Dict, Tuple, Union
 from shapely.geometry import Polygon, box
 import geopandas as gpd
 
+import argparse
+import sys
+
 
 def create_s3_folder(bucket_name, folder_path):
     s3 = boto3.client('s3')
@@ -143,13 +146,6 @@ def get_admin_shapes(iso3: str, admin_level: int = 1):
         return adm2
 
 
-# Example usage
-# bucket_name = "geotar.s3.hq"
-# iso3 = "LBN"
-# storage_structure_s3(bucket_name, iso3)
-
-# polygon = get_admin_shapes(iso3, 0)
-
 def generate_bbox(polygon, iso3):
     """
     Args:
@@ -169,6 +165,24 @@ def generate_bbox(polygon, iso3):
 
     # Save the GeoDataFrame to a GeoJSON file
     bbox_gdf.to_file(f"s3://geotar.s3.hq/Geotar/{iso3}/geodata/Processed/Mask/{iso3}_Mask.geojson", driver="GeoJSON")
+    print(f"mask file {iso3}_Mask.geojson created")
     return
 
-# generate_bbox(polygon, iso3)
+def create_new_country(bucket_name, iso3):
+    storage_structure_s3(bucket_name, iso3)
+    polygon = get_admin_shapes(iso3, 0)
+    generate_bbox(polygon, iso3)
+    return
+
+def main():
+    parser = argparse.ArgumentParser(description="Create new country data structure.")
+    parser.add_argument('bucket_name', type=str, help='The name of the S3 bucket')
+    parser.add_argument('iso3', type=str, help='The ISO3 code of the country')
+
+    args = parser.parse_args()
+
+    create_new_country(args.bucket_name, args.iso3)
+
+if __name__ == "__main__":
+    main()
+
