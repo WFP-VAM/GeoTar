@@ -9,7 +9,7 @@ import time
 # logging.basicConfig(level=logging.DEBUG)
 
 # Specify the S3 client with a specific configuration
-s3_client = boto3.client('s3', config=Config(retries={'max_attempts': 10, 'mode': 'standard'}))
+s3_client = boto3.client('s3', region_name='eu-central-1', config=Config(retries={'max_attempts': 10, 'mode': 'standard'}))
 
 def put_tif_to_S3(in_file, key, bucket_name, retries=3):
     # Load the dataset into the virtual filesystem
