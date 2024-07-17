@@ -148,7 +148,7 @@ def get_admin_shapes(iso3: str, admin_level: int = 1):
 # iso3 = "LBN"
 # storage_structure_s3(bucket_name, iso3)
 
-polygon = get_admin_shapes(iso3, 0)
+# polygon = get_admin_shapes(iso3, 0)
 
 def generate_bbox(polygon, iso3):
     """
@@ -171,4 +171,4 @@ def generate_bbox(polygon, iso3):
     bbox_gdf.to_file(f"s3://geotar.s3.hq/Geotar/{iso3}/geodata/Processed/Mask/{iso3}_Mask.geojson", driver="GeoJSON")
     return
 
-generate_bbox(polygon, iso3)
+# generate_bbox(polygon, iso3)
