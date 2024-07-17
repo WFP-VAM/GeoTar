@@ -164,7 +164,7 @@ def WorldcovertoMODIS(bbox, bucket_name, iso3):
     # warp opetation
     gdal.Warp(dst_file, tiffslist, **kwargs)
     key = f'Geotar/{iso3}/geodata/Processed/LandCover/Worldcover_{iso3}.tif'
-    put_tif_to_S3(dst_file, key, bucket_name)
+    put_tif_to_s3(dst_file, key, bucket_name)
     gdal.Unlink(dst_file)
     gdal.Unlink(ref_tif)
     print(key, "processed successfully")
