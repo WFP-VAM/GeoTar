@@ -51,7 +51,7 @@ class Process:
         year = m_ndvi.time.dt.year.item(0)
 
         s3_dir = f"{self.pilot_name}/geodata/Processed/Vegetation/season"
-        create_s3_folder(bucket_name, s3_dir)
+        Storage_structure.create_s3_folder(bucket_name, s3_dir)
         filename_m_s = f"/vsimem/ndvi_m_s{year}.tif"
 
         # create landcover mask
