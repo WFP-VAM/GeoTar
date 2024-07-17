@@ -100,7 +100,7 @@ class Process:
             image_ndvi = m_ndvi.sel(time=time_val)
 
             # create a file path for the geotiff file with both year and month in filename
-            filename = f'vsimem/ndvi_{year}_{month:02d}.tif'
+            filename = f'/vsimem/ndvi_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
             image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
