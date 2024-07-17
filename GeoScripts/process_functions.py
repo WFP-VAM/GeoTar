@@ -83,7 +83,6 @@ class Process:
 
         ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s_{year}.tif'
         S3_functions.put_tif_to_s3(filename_m_s, ndvi_s3_key, bucket_name)
-        print(f"{filename_m_s} saved successfully")
         gdal.Unlink(filename_m_s)
         # Save the monthly ndvi files
 
@@ -106,12 +105,9 @@ class Process:
             image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
             key = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
             S3_functions.put_tif_to_s3(filename,key,bucket_name)
-            print(f"{filename} saved successfully")
             gdal.Unlink(filename)
         return
 
-#
-#
     def process_ndvi_anomaly(self):
         """
             Fetches and computes the NDVI anomaly for the specified period.
@@ -233,61 +229,45 @@ class Process:
         print("CHIRPS period:", period)
 
         chirps = self.hdc_stac_client.search(bbox=self.bbox,
-            # collections=['mod13q1_vim_native'],
-            collections=['rfh_dekad'],
-            datetime= period,# '2022-01-01/2022-12-31'
-        ).get_all_items()
+                                             # collections=['mod13q1_vim_native'],
+                                             collections=['rfh_dekad'],
+                                             datetime=period,  # '2022-01-01/2022-12-31'
+                                             ).get_all_items()
 
-        res = 0.0022457882102988  #50.045454545Km #0.0022457882102988 # 250 or 0.01 for 1km
+        res = 0.0022457882102988  # 50.045454545Km #0.0022457882102988 # 250 or 0.01 for 1km
 
         chirps_stac = stac_load(chirps, output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
-        #chirps_stac
-
-        # Paths to Save the zarr file
-        # create a directory to store the geotiff files
-        #output_dir_zarr = f'C:/Geotar/{self.pilot_name}/geodata/zarr'
-        #if not os.path.exists(output_dir_zarr):
-        #    os.makedirs(output_dir_zarr)
-        #outfile = output_dir_zarr + '/CHIRPS_stac.zarr'
-
-        # Save the zarr file
-        # Delete the existing Zarr store if it exists
-        #if os.path.exists(outfile):
-        #    shutil.rmtree(outfile)
-        # save the zarr file
-        #CHIRPS_stac.to_zarr(outfile)
-        #print(f'{outfile} saved')
-
-        # Load xarray from zarr file (optional)
-        #CHIRPS_stac = xr.open_zarr(outfile)
 
         # Mask out no data values
-
         chirps_stac = xr.where(chirps_stac == -9999, np.nan, chirps_stac)
-        #CHIRPS_stac
 
         # Group CHIRPS data by month
         chirps_m = chirps_stac.resample(time='1M').sum()
-        #CHIRPS_m
+        year = chirps_m.time.dt.year.item(0)
         # Creates the seasonal monthly mean precipitation
         chirps_m_s = chirps_m.mean(dim='time')
-        #CHIRPS_m_s
 
-        output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
-        filename_m_s = f'{output_dir_s}/rain_m_s.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        output_dir_s = f"{self.pilot_name}/geodata/Processed/Precipitation/season"
+        Storage_structure.create_s3_folder(bucket_name, output_dir_s)
+        filename_m_s = f"/vsimem/rain_m_s_{year}.tif"
 
         # write the data to a geotiff file
         chirps_m_s.rio.to_raster(filename_m_s, driver='GTiff')
-        print(f'{filename_m_s} saved successfully')
 
-        # Export CHIRPS Rainfall monthly data
+        chirps_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/season/rain_m_s{year}.tif'
+        S3_functions.put_tif_to_s3(filename_m_s, chirps_s3_key, bucket_name)
+        gdal.Unlink(filename_m_s)
+        # Creates the seasonal monthly mean precipitation
+        chirps_s_s = chirps_m.sum(dim='time')
 
-        # create a directory to store the geotiff files
-        output_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Precipitation'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        filename_s_s = f"/vsimem/rain_s_s_{year}.tif"
+
+        # write the data to a geotiff file
+        chirps_s_s.rio.to_raster(filename_s_s, driver='GTiff')
+
+        chirps_sum_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/season/rain_s_s_{year}.tif'
+        S3_functions.put_tif_to_s3(filename_s_s, chirps_sum_s3_key, bucket_name)
+        gdal.Unlink(filename_s_s)
 
         # loop over all timesteps in the dataset
         for time_val in chirps_m.time:
@@ -299,24 +279,14 @@ class Process:
             # print("The no data value is:",da.rio.nodata)
 
             # create a file path for the geotiff file
-            filename = f'{output_dir}/rain_{year}_{month:02d}.tif'
+            filename = f'/vsimem/rain_{year}_{month:02d}.tif'
 
             # write the data to a geotiff file
             da.rio.to_raster(filename)
-            print(f'{filename} saved successfully')
+            chirps_month_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/rain_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_s3(filename, chirps_month_s3_key, bucket_name)
+            gdal.Unlink(filename)
 
-        # Creates the seasonal monthly sum precipitation
-        chirps_s_s = chirps_m.sum(dim='time')
-        #CHIRPS_s_s
-
-        output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
-        filename_s_s = f'{output_dir_s}/rain_s_s.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
-
-        # write the data to a geotiff file
-        chirps_s_s.rio.to_raster(filename_s_s, driver='GTiff')
-        print(f'{filename_s_s} saved successfully')
         return
 
     def process_CHIRPS_Anomaly(self):
@@ -340,90 +310,77 @@ class Process:
         modified_period = modified_start_date.strftime("%Y-%m-%d") + '/' + modified_end_date.strftime("%Y-%m-%d")
 
         chirps_an = self.hdc_stac_client.search(bbox=self.bbox,
-            #collections=['mod13q1_vim_native'],
-            collections=['rfq_dekad'],
-            datetime=modified_period #'2022-01-01/2022-12-31',
-        ).get_all_items()
-        #print(stac_items)
+                                                # collections=['mod13q1_vim_native'],
+                                                collections=['rfq_dekad'],
+                                                datetime=modified_period  # '2022-01-01/2022-12-31',
+                                                ).get_all_items()
+        # print(stac_items)
 
         res = 0.0022457882102988
         crs = rasterio.crs.CRS.from_epsg(4326)
-        chirps_an_stac = stac_load(chirps_an, output_crs='EPSG:4326', resolution= res,
+        chirps_an_stac = stac_load(chirps_an, output_crs='EPSG:4326', resolution=res,
                                    patch_url=self.signer, bbox=self.bbox)
-        #CHIRPS_an_stac
-
-        # # create a directory to store the geotiff files
-        # output_dir_zarr = f'C:/Geotar/{pilot_name}/geodata/zarr'
-        # if not os.path.exists(output_dir_zarr):
-        #     os.makedirs(output_dir_zarr)
-        # outfile = output_dir_zarr + '/CHIRPS_an_stac.zarr'
-        #
-        # # Delete the existing Zarr store if it exists
-        # if os.path.exists(outfile):
-        #     shutil.rmtree(outfile)
-        # CHIRPS_an_stac.to_zarr(outfile)
-        # print(f'{outfile} saved')
 
         # Mask out/set no data values
         chirps_an_stac = xr.where(chirps_an_stac == -9999, np.nan, chirps_an_stac)
-        #CHIRPS_an_stac
 
         # Aggregate the dekadal Chirps anomaly data by month
         chirps_an_m = chirps_an_stac.resample(time='1M').mean()
-        #rescale to have values from 0 to 1
-        chirps_an_m = chirps_an_m/100
-        #CHIRPS_an_m
+        year = chirps_an_m.time.dt.year.item(0)
+        # rescale to have values from 0 to 1
+        chirps_an_m = chirps_an_m / 100
 
         # Aggregate mean anomaly data by season
 
         chirps_an_s = chirps_an_m.mean(dim='time')
-        #CHIRPS_an_s
+
+        # CHIRPS_an_s
 
         image_an = chirps_an_s
-        image_an.rio.set_crs(crs)
-        output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/precipitation/season'
-        filename_s = f'{output_dir_s}/rain_an_m.tif'
-        if not os.path.exists(output_dir_s):
-            os.makedirs(output_dir_s)
+        image_an.rio.write_crs("epsg:4326")
+        output_dir_s = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/season'
+        rain_anom_season = f'/vsimem/rain_an_m_{year}.tif'
 
         # write the data to a geotiff file
-        image_an.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
-        print(f'{filename_s} saved successfully')
+        image_an.rio.to_raster(rain_anom_season, driver='GTiff', crs='EPSG:4326')
+        rain_anom_season_key = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/season/rain_an_m_{year}.tif'
+        S3_functions.put_tif_to_s3(rain_anom_season, rain_anom_season_key, bucket_name)
+        gdal.Unlink(rain_anom_season)
 
         # Agreggate anomaly max data season
         chirps_an_s_max = chirps_an_m.max(dim='time')
-        #CHIRPS_an_s_max
-        image_an_m = chirps_an_s_max
-        image_an_m.rio.set_crs(crs)
-        filename_s = f'{output_dir_s}/rain_an_ma.tif'
+        # CHIRPS_an_s_max
+        chirps_an_s_max.rio.write_crs("epsg:4326")
+        max_anom_season = f'/vsimem/rain_an_max_{year}.tif'
         # write the data to a geotiff file
-        image_an_m.rio.to_raster(filename_s, driver='GTiff', crs='EPSG:4326')
-        print(f'{filename_s} saved successfully')
+        chirps_an_s_max.rio.to_raster(max_anom_season, driver='GTiff', crs='EPSG:4326')
+        rain_anom_max_season_key = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/season/rain_an_max_{year}.tif'
+        S3_functions.put_tif_to_s3(max_anom_season, rain_anom_max_season_key, bucket_name)
+        gdal.Unlink(max_anom_season)
 
         # Export the monthly anomaly data to GeoTiff files
-
-        # create a directory to store the geotiff files
-        output_dir = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Precipitation'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
 
         # loop over all timesteps in the dataset
         for time_val in chirps_an_m.time:
             month = time_val.dt.month.item()
             year = time_val.dt.year.item()
             da = chirps_an_m.sel(time=time_val)
-            da.rio.set_crs(crs)
+            da.rio.write_crs("epsg:4326")
 
             # create a file path for the geotiff file
-            filename = f'{output_dir}/rain_a_{year}_{month:02d}.tif'
+            filename = f'/vsimem/rain_a_{year}_{month:02d}.tif'
+
+            output_dir = f'Geotar/{self.pilot_name}/geodata/Processed/Precipitation/'
 
             # write the data to a geotiff file
             da.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
-            print(f'{filename} saved successfully')
+            month_anom_rain_key = f'{output_dir}/rain_a_{year}_{month:02d}.tif'
+            S3_functions.put_tif_to_s3(filename, month_anom_rain_key, bucket_name)
+            gdal.Unlink(filename)
         return
 
-# # # Land Surface temperature processing
-#
+    # Land Surface temperature processing
+    #
     # Need to readjust the dates of the period to have same dates as the NDVI
     def process_LST(self):
         '''
@@ -461,51 +418,18 @@ class Process:
                                         ).get_all_items()
         res = 0.0022457882102988 # 250 or 0.01 for 1km
         lst = stac_load(lst_query, output_crs='EPSG:4326', resolution= res, patch_url=self.signer, bbox=self.bbox)
-        #lst
 
-        # output_dir_zarr = f'C:/Geotar/{pilot_name}/geodata/zarr'
-        # outfile = output_dir_zarr + '/lst_stac.zarr'
-        #
-        #
-        # # create a directory to store the geotiff files
-        # if not os.path.exists(output_dir_zarr):
-        #     os.makedirs(output_dir_zarr)
-        #
-        # # Delete the existing Zarr file if it exists
-        # if os.path.exists(outfile):
-        #     shutil.rmtree(outfile)
-        #
-        # lst.to_zarr(outfile)
-        # print(f'{outfile} saved')
-        # output_dir_zarr = f'C:/Geotar/{self.pilot_name}/geodata/zarr'
-        # outfile = output_dir_zarr + '/lst_an_stac.zarr'
-
-        # # create a directory to store the geotiff files
-        # if not os.path.exists(output_dir_zarr):
-        #     os.makedirs(output_dir_zarr)
-        #
-        # # Delete the existing Zarr file if it exists
-        # if os.path.exists(outfile):
-        #     shutil.rmtree(outfile)
-        #
-        # lst_anom.to_zarr(outfile)
-        # print(f'{outfile} saved')
-
-        # # Load xarray from zarr file (optional)
-        #
-        # lst_anom= xr.open_zarr(outfile)
-        # lst_anom
 
         # group the lST data by month
         lst_m = lst.drop('tna')
         lst_m = lst_m.drop('spatial_ref')
         lst_m = lst_m.resample(time='1M').mean()
         lst_m = (lst_m * 0.02) - 273.15
-        #lst_m
+
         lst_s = lst_m.mean(dim='time')
-        #lst_s
-        image_m = lst_s # Rescaling applied here
-        output_dir_s = f'C:/Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
+
+        image_m = lst_s
+        output_dir_s = f'Geotar/{self.pilot_name}/geodata/Processed/Temperature/season'
         filename_s = f'{output_dir_s}/LST_m.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
