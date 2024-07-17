@@ -14,17 +14,16 @@ def create_s3_folder(bucket_name, folder_path):
     try:
         s3.head_object(Bucket=bucket_name, Key=key)
         print(f"Folder {folder_path} already exists in bucket {bucket_name}")
-        return  # Stop the current process if the folder exists
     except ClientError as e:
-        if e.response['Error']['Code'] != '404':
+        if e.response['Error']['Code'] == '404':
+            # Create the folder if it doesn't exist
+            try:
+                s3.put_object(Bucket=bucket_name, Key=key)
+                print(f"Folder {folder_path} created successfully in bucket {bucket_name}")
+            except ClientError as error:
+                print(f"Creation of the folder {folder_path} failed: {error}")
+        else:
             raise  # If the error is not '404 Not Found', re-raise the exception
-
-    # Create the folder if it doesn't exist
-    try:
-        s3.put_object(Bucket=bucket_name, Key=key)
-        print(f"Folder {folder_path} created successfully in bucket {bucket_name}")
-    except ClientError as error:
-        print(f"Creation of the folder {folder_path} failed: {error}")
 
 
 def storage_structure_s3(bucket_name:str, iso3:str):
@@ -54,6 +53,7 @@ def storage_structure_s3(bucket_name:str, iso3:str):
                 for subsubfolder in subfolders_level_3:
                     subsubfolder_path = f"{data_path}/{subsubfolder}"
                     create_s3_folder(bucket_name, subsubfolder_path)
+
     return
 
 def get_admin_shapes(iso3: str, admin_level: int = 1):
