@@ -8,6 +8,8 @@ from typing import List
 import os
 from compute_proximity import proximity_rasters
 from S3_functions import read_s3_acled_key
+from botocore.config import Config
+from botocore import exceptions
 
 class get_vectors:
     def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str, root: str):
@@ -27,40 +29,46 @@ class get_vectors:
         :return:
         returns the roads dataset for the mask area and saves it in the data folder
         """
-        base_dir = f'{root}Geotar/{self.pilot_name}/geodata/Processed/Roads'
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-        output_file = os.path.normpath(os.path.join(base_dir, 'roads.geojson'))
-        if not os.path.exists(output_file):
-            print('Fetching Roads')
+        s3 = boto3.client('s3', region_name='eu-central-1',
+                          config=Config(retries={'max_attempts': 10, 'mode': 'standard'}))
+        try:
+            # Check if the file exists
+            s3.head_object(Bucket='geotar.s3.hq',
+                           Key='Geotar/{self.pilot_name}/geodata/Processed/Roads/{self.pilot_name}_roads.geojson')
+            print(f"The file '{s3_key}' already exists in the bucket '{bucket_name}'.")
+        except exceptions.ClientError as e:
+            # If the file does not exist, the process runs
+            if e.response['Error']['Code'] == '404':
+                print('Fetching Roads')
 
-            # Load the GeoDataFrame from the shapefile
-            #area_shp = self.area_shp
+                # Load the GeoDataFrame from the shapefile
+                # area_shp = self.area_shp
 
-            # Extract the bounding box coordinates
-            #bbox = self.bbox #area_shp.total_bounds
+                # Extract the bounding box coordinates
+                # bbox = self.bbox #area_shp.total_bounds
 
-            # Create a Polygon object from the bounding box coordinates
-            polygon = Polygon([(self.bbox[0], self.bbox[1]), (self.bbox[2], self.bbox[1]), (self.bbox[2], self.bbox[3]), (self.bbox[0], self.bbox[3])])
+                # Create a Polygon object from the bounding box coordinates
+                polygon = Polygon(
+                    [(self.bbox[0], self.bbox[1]),
+                     (self.bbox[2], self.bbox[1]),
+                     (self.bbox[2], self.bbox[3]),
+                     (self.bbox[0], self.bbox[3])])
 
-            # Download road data intersecting the polygon
-            graph = ox.graph_from_polygon(polygon, network_type='all', simplify=True)
+                # Download road data intersecting the polygon
+                graph = ox.graph_from_polygon(polygon, network_type='all', simplify=True)
 
-            # Convert the graph to a GeoDataFrame
-            gdf = ox.graph_to_gdfs(graph, nodes=False, edges=True)
+                # Convert the graph to a GeoDataFrame
+                gdf = ox.graph_to_gdfs(graph, nodes=False, edges=True)
 
-            # Filter roads intersecting the polygon
-            roads_intersecting_polygon = gdf[gdf.geometry.intersects(polygon)]
-            roads_intersecting_polygon.reset_index(inplace=True)
-            roads_to_convert = roads_intersecting_polygon[['key', 'geometry', 'length']]
+                # Filter roads intersecting the polygon
+                roads_intersecting_polygon = gdf[gdf.geometry.intersects(polygon)]
+                roads_intersecting_polygon.reset_index(inplace=True)
+                roads_to_convert = roads_intersecting_polygon[['key', 'geometry', 'length']]
 
-            roads_to_convert.to_file(output_file)
+                output_file = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/Roads/{self.pilot_name}_roads.geojson"
+                roads_to_convert.to_file(output_file)
+                proximity_rasters(self.pilot_name, output_file, self.mask_shp, "roads")
 
-            proximity_rasters(self.pilot_name, output_file, self.mask_shp, "roads")
-
-            print(f"roads file saved for", self.pilot_name)
-        else:
-            print("Roads file already exists")
         return
 
     def get_conflict(self):
@@ -201,7 +209,7 @@ class get_vectors:
         export_schools = export_schools[['osmid', 'amenity', 'name', 'geometry']]
         # Filter out geometries that are not points
         export_schools = export_schools[export_schools['geometry'].apply(lambda geom: geom.type == 'Point')]
-        school_file = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Education/{self.pilot_name}_education.shp"
+        school_file = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/Education/{self.pilot_name}_education.geojson"
         export_schools.to_file(school_file)
         proximity_rasters(self.pilot_name, school_file, self.mask_shp, "education")
         return
@@ -209,7 +217,7 @@ class get_vectors:
     def get_healthsites(self):
 
         print('Fetching health sites...')
-        input_shp = r"C:/Geotar/Global/Geodata/Raw/Health/health_facilities.shp"
+        input_shp = r"s3://geotar.s3.hq/Geotar/GLOBAL/Geodata/Raw/Health_facilities/health_facilities.geojson"
 
         # Read the GeoPandas object
         gdf = gpd.read_file(input_shp)
@@ -220,14 +228,14 @@ class get_vectors:
             # If there is an intersection, proceed with clipping
             gdf_clipped = gpd.clip(gdf, mask)
 
-            output_shape = f"C:/Geotar/{self.pilot_name}/geodata/Processed/health/healthsites.shp"
+            output_shape = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/health/healthsites.shp"
             gdf_clipped.to_file(output_shape)
             print(f'health sites saved at: {output_shape}')
             proximity_rasters(self.pilot_name, output_shape, self.mask_shp, "health")
             return
         else:
             # No intersection found
-            print("No intersection found between the health sites database and the mask.")
+            print(f"{self.pilot_name} not available on the health sites database, it needs to be uploaded manually.")
             return None
 
 
