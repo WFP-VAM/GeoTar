@@ -28,84 +28,89 @@ class Process:
         Returns:
         - Raster file with mean NDVI for the selected period.
         """
-        print("Processing NDVI")
-        ndvi = self.hdc_stac_client.search(bbox=self.bbox,
-                                      # collections=["mod13q1_vim_native"],
-                                      collections=["mxd13q1_vim_dekad"],
-                                      datetime=self.period,  # emulates the period of data cube files
-                                      ).get_all_items()
+        try:
 
-        res = 0.0022457882102988 # 250 or 0.01 for 1km
-        crs = rasterio.crs.CRS.from_epsg(4326)
-        ndvi_stack = stac_load(ndvi,  output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
-        # Aggregate the dekadal NDVI by month
-        m_ndvi = ndvi_stack.resample(time='1M').mean()
-        m_ndvi = m_ndvi * 0.0001
+            print("Processing NDVI")
+            ndvi = self.hdc_stac_client.search(bbox=self.bbox,
+                                          # collections=["mod13q1_vim_native"],
+                                          collections=["mxd13q1_vim_dekad"],
+                                          datetime=self.period,  # emulates the period of data cube files
+                                          ).get_all_items()
 
-        # Mask out extreme values
-        m_ndvi = xr.where(m_ndvi < -1, np.nan, m_ndvi)
-        m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
+            res = 0.0022457882102988 # 250 or 0.01 for 1km
+            crs = rasterio.crs.CRS.from_epsg(4326)
+            ndvi_stack = stac_load(ndvi,  output_crs='EPSG:4326', resolution=res, patch_url=self.signer, bbox=self.bbox)
+            # Aggregate the dekadal NDVI by month
+            m_ndvi = ndvi_stack.resample(time='1M').mean()
+            m_ndvi = m_ndvi * 0.0001
 
-        #Aggregate the data by season
-        ndvi_m_s = m_ndvi.mean(dim="time")
-        # ndvi_m_s = ndvi_m_s.set_crs(crs)
-        year = m_ndvi.time.dt.year.item(0)
+            # Mask out extreme values
+            m_ndvi = xr.where(m_ndvi < -1, np.nan, m_ndvi)
+            m_ndvi = xr.where(m_ndvi > 1, np.nan, m_ndvi)
 
-        s3_dir = f"{self.pilot_name}/geodata/Processed/Vegetation/season"
-        Storage_structure.create_s3_folder(bucket_name, s3_dir)
-        filename_m_s = f"/vsimem/ndvi_m_s{year}.tif"
+            #Aggregate the data by season
+            ndvi_m_s = m_ndvi.mean(dim="time")
+            # ndvi_m_s = ndvi_m_s.set_crs(crs)
+            year = m_ndvi.time.dt.year.item(0)
 
-        # create landcover mask
-        World_cover.WorldcovertoMODIS(self.bbox,bucket_name,self.pilot_name)
+            s3_dir = f"{self.pilot_name}/geodata/Processed/Vegetation/season"
+            Storage_structure.create_s3_folder(bucket_name, s3_dir)
+            filename_m_s = f"/vsimem/ndvi_m_s{year}.tif"
 
-        # Mask NDVI using land cover
-        tiff_path = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
-        mask_array = rioxarray.open_rasterio(tiff_path)
-        mask_array = mask_array.squeeze("band", drop=True)
-        mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
 
-        mask_array = mask_array.transpose('latitude', 'longitude')
+            # create landcover mask
+            ndvi_m_s.rio.to_raster(f"/vsimem/mask.tif", driver="GTiff")
+            World_cover.WorldcovertoMODIS(f"/vsimem/mask.tif", self.bbox,bucket_name,self.pilot_name)
+            gdal.Unlink(f"/vsimem/mask.tif")
 
-        latitude = ndvi_m_s['latitude'].values
-        longitude = ndvi_m_s['longitude'].values
-        # Convert mask_array to an xarray DataArray
-        mask_dataarray = xr.DataArray(mask_array,
-                                      coords={'latitude': latitude, 'longitude': longitude},
-                                      dims=['latitude', 'longitude'])
-        xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
-        # Create a mask where conditions are not met and set to 0 where conditions are met
-        ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
-        ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
-        ndvi_masked.rio.write_crs("epsg:4326")
+            # Mask NDVI using land cover
+            tiff_path = f"s3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Processed/LandCover/Worldcover_{self.pilot_name}.tif"
+            mask_array = rioxarray.open_rasterio(tiff_path)
+            mask_array = mask_array.squeeze("band", drop=True)
+            mask_array = mask_array.rename({'x': 'longitude','y': 'latitude'})
 
-        # save the masked ndvi data
-        ndvi_masked.rio.to_raster(filename_m_s, driver='GTiff')
+            mask_array = mask_array.transpose('latitude', 'longitude')
 
-        ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s_{year}.tif'
-        S3_functions.put_tif_to_s3(filename_m_s, ndvi_s3_key, bucket_name)
-        gdal.Unlink(filename_m_s)
-        # Save the monthly ndvi files
+            latitude = ndvi_m_s['latitude'].values
+            longitude = ndvi_m_s['longitude'].values
+            # Convert mask_array to an xarray DataArray
+            mask_dataarray = xr.DataArray(mask_array,
+                                          coords={'latitude': latitude, 'longitude': longitude},
+                                          dims=['latitude', 'longitude'])
+            xr.align(ndvi_m_s, mask_dataarray, join='exact')  # will raise a ValueError if not aligned
+            # Create a mask where conditions are not met and set to 0 where conditions are met
+            ndvi_masked = xr.where((mask_dataarray == 40) | (mask_dataarray == 50), ndvi_m_s, 0)
+            ndvi_masked = ndvi_masked.drop_vars('spatial_ref')
+            ndvi_masked.rio.write_crs("epsg:4326")
 
-        # create a directory to store the geotiff files
-        output_dir = f"Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
-        # Storage_structure.create_s3_folder(bucket_name,output_dir)
+            # save the masked ndvi data
+            ndvi_masked.rio.to_raster(filename_m_s, driver='GTiff')
 
-        # loop over all timesteps in the dataset
-        for time_val in m_ndvi.time:
-            year = time_val.dt.year.item()
-            month = time_val.dt.month.item()
+            ndvi_s3_key = f'Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season/ndvi_m_s_{year}.tif'
+            S3_functions.put_tif_to_s3(filename_m_s, ndvi_s3_key, bucket_name)
+            gdal.Unlink(filename_m_s)
+            # Save the monthly ndvi files
 
-            # extract a single timestep as a DataArray
-            image_ndvi = m_ndvi.sel(time=time_val)
+            # create a directory to store the geotiff files
+            output_dir = f"Geotar/{self.pilot_name}/geodata/Processed/Vegetation"
+            # Storage_structure.create_s3_folder(bucket_name,output_dir)
 
-            # create a file path for the geotiff file with both year and month in filename
-            filename = f'/vsimem/ndvi_{year}_{month:02d}.tif'
+            # loop over all timesteps in the dataset
+            for time_val in m_ndvi.time:
+                year = time_val.dt.year.item()
+                month = time_val.dt.month.item()
 
-            # write the data to a geotiff file
-            image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
-            key = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
-            S3_functions.put_tif_to_s3(filename,key,bucket_name)
-            gdal.Unlink(filename)
+                # extract a single timestep as a DataArray
+                image_ndvi = m_ndvi.sel(time=time_val)
+
+                # create a file path for the geotiff file with both year and month in filename
+                filename = f'/vsimem/ndvi_{year}_{month:02d}.tif'
+
+                # write the data to a geotiff file
+                image_ndvi.rio.to_raster(filename, driver='GTiff', crs='EPSG:4326')
+                key = f'{output_dir}/ndvi_{year}_{month:02d}.tif'
+                S3_functions.put_tif_to_s3(filename,key,bucket_name)
+                gdal.Unlink(filename)
         return
 
     def process_ndvi_anomaly(self):

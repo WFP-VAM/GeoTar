@@ -55,3 +55,17 @@ def check_and_delete_s3_object(bucket_name, key):
         else:
             # Something else has gone wrong.
             raise
+
+def read_s3_acled_key(bucket_name, s3_key):
+    try:
+        # Read the file from S3
+        obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+        contents = obj['Body'].read().decode('utf-8')
+        print('Key loaded')
+        return contents  # Return the contents of the file if needed
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'NoSuchKey':
+            print('The file does not exist.')
+        else:
+            print(f'An error occurred: {e}')
+    return(contents)

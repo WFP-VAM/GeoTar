@@ -7,6 +7,7 @@ import pandas as pd
 from typing import List
 import os
 from compute_proximity import proximity_rasters
+from S3_functions import read_s3_acled_key
 
 class get_vectors:
     def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str, root: str):
@@ -65,15 +66,7 @@ class get_vectors:
     def get_conflict(self):
         print('fetching ACLED data')
         # path = r'C:/Users/oscar.bautista/OneDrive - World Food Programme/GLOBAL/Geodata/Raw/ACLED'
-        api_path = r'C:/Users/oscar.bautista/OneDrive - World Food Programme/GLOBAL/Geodata/Raw/ACLED/acled_key.txt'
-        try:
-            with open(api_path, 'r') as file:
-                contents = file.read()
-                print('Key loaded')  # Instead of return
-        except FileNotFoundError:
-            print('The file acled_key.txt does not exist.')
-        except Exception as e:
-            print(f'An error occurred: {e}')
+        contents = read_s3_acled_key('geotar.s3.hq', 'Geotar/GLOBAL/Geodata/Raw/ACLED/acled_key.txt')
 
         # set the period for the API call
         # Split the string using the '/' character
@@ -92,7 +85,7 @@ class get_vectors:
                                 f'country={self.country_name}&'
                                 f'&limit=15000')
         # f'first_event_date={start_date}'
-        #print(response)
+        # print(response)
 
         # Check if the request was successful and the response exists
         if response and response.status_code == 200:
@@ -137,6 +130,7 @@ class get_vectors:
         # Print the first 5 rows of the data frame
         # print(type(df))
 
+        print()
         print('number of events: ', len(df['fatalities']))
 
         # chage data type of coordinate columns
@@ -159,6 +153,7 @@ class get_vectors:
         print(f'unfiltered dataset: \nfirst date: {min_date_df} last year: {max_date_df}')
         min_date = df_period['event_date'].min()
         max_date = df_period['event_date'].max()
+        print()
         print(f'filtered dataset: \nfirst date: {min_date} last year: {max_date}')
 
         # Create a Point geometry column from the latitude and longitude columns
@@ -166,11 +161,11 @@ class get_vectors:
 
         # Create a GeoDataFrame from the pandas DataFrame and the geometry column
         gdf = gpd.GeoDataFrame(df_period, geometry=geometry, crs='EPSG:4326')
-        #print(len(gdf))
+        # print(len(gdf))
 
         area_shp = gpd.read_file(self.mask_shp)
         geo_acled = gpd.clip(gdf, area_shp)
-        #print(len(geo_acled))
+        # print(len(geo_acled))
 
         min_year = geo_acled['year'].min()
         max_year = geo_acled['year'].max()
@@ -182,11 +177,11 @@ class get_vectors:
         geo_acled['event_date'] = geo_acled['event_date'].astype(str)
 
         print(f'records in data {len(geo_acled["event_date"])}')
-        conf_shp = fr'C:/Geotar/{self.pilot_name}/geodata/Raw/conflict/filtered_acled.shp'
+        conf_shp = fr's3://geotar.s3.hq/Geotar/{self.pilot_name}/geodata/Raw/Conflict/filtered_acled.geojson'
         geo_acled.to_file(conf_shp)
-        print(f'Conflict shapefile saved as {conf_shp}')
+        print(f'Conflict file saved as {conf_shp}')
+        print()
         proximity_rasters(self.pilot_name, conf_shp, self.mask_shp, "conflict")
-
 
         return
 

@@ -9,7 +9,7 @@ import json
 from S3_functions import put_tif_to_s3
 
 
-def WorldcovertoMODIS(bbox, bucket_name, iso3):
+def WorldcovertoMODIS(ref_tif, bucket_name, iso3):
     # area_shp = gpd.read_file(mask_shp)
 
     # Get the bounding box of the shapefile
@@ -52,7 +52,7 @@ def WorldcovertoMODIS(bbox, bucket_name, iso3):
         hdc_stac_client = Client.open(HDC_STAC_URL, headers=header)
 
         # Set up GDAL/rasterio configuration.
-        configure_rio(cloud_defaults=True, verbose=True, aws=aws)
+        configure_rio(cloud_defaults=True, verbose=False, aws=aws)
 
         return hdc_stac_client, signer
 
@@ -70,10 +70,10 @@ def WorldcovertoMODIS(bbox, bucket_name, iso3):
     ndvi = ndvi_stack.resample(time='1M').mean()
     ndvi = ndvi.mean(dim="time")
 
-    ref_tif = f'/vsimem/MODIS_mask.tif'
+    # ref_tif = f'/vsimem/MODIS_mask.tif'
     # write the data to a geotiff file
-    ndvi.rio.to_raster(ref_tif, driver='GTiff')
-    print(f"{ref_tif} created successfully")
+    # ndvi.rio.to_raster(ref_tif, driver='GTiff')
+    # print(f"{ref_tif} created successfully")
 
     # # define the output folder path
     # s3_dir = f"/Geotar/{iso3}/geodata/Processed/LandCover/tiles"
@@ -125,7 +125,7 @@ def WorldcovertoMODIS(bbox, bucket_name, iso3):
         print(i)
 
     def get_extent(ref_tif):
-        print(ref_tif)
+        # print(ref_tif)
         dataset = gdal.Open(ref_tif)
         if dataset is None:
             print("Failed to open the raster file.")
