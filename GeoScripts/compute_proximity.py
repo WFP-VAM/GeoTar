@@ -110,3 +110,50 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
     src_ds = None
     dst_ds = None
     return
+
+import boto3
+from osgeo import gdal, osr
+
+def get_travel_time(iso3:str, bbox:list):
+    in_key = 'Geotar/GLOBAL/Geodata/Raw/Travel_time/travel_time_to_cities_11.tif'
+    bucket_name = 'geotar.s3.hq'
+    # Create S3 URLs
+    input_tif = f'/vsis3/{bucket_name}/{in_key}'
+    clipped_tif = '/vsimem/clipped_output.tif'
+
+    # Open the input file
+    ds = gdal.Open(input_tif)
+
+    # Get the spatial reference of the input file
+    input_srs = osr.SpatialReference()
+    input_srs.ImportFromWkt(ds.GetProjection())
+
+    # Define the target spatial reference (EPSG:4326)
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromEPSG(4326)
+
+    # Create a coordinate transformation
+    transform = osr.CoordinateTransformation(input_srs, target_srs)
+
+    # Transform the bounding box coordinates to the target CRS
+    (xmin, ymin, _) = transform.TransformPoint(bbox[0], bbox[1])
+    (xmax, ymax, _) = transform.TransformPoint(bbox[2], bbox[3])
+
+    translate_options = gdal.TranslateOptions(
+        projWin=[xmin, ymax, xmax, ymin],
+        projWinSRS='EPSG:4326',
+        outputSRS='EPSG:4326',
+        noData=-9999)
+
+    # Clip the raster using gdal.Translate
+    gdal.Translate(
+        clipped_tif,
+        ds,
+        options=translate_options
+    )
+
+    # Upload the clipped file to S3
+    out_key = f'Geotar/{iso3}/Geodata/Processed/Travel_time/travel_time_to_cities_11.tif'
+    # Upload the file
+    put_tif_to_s3(clipped_tif, out_key, bucket_name, retries=3)
+    print(f'travel time uploaded to s3://{bucket_name}/{out_key}')
