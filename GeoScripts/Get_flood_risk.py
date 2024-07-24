@@ -1,13 +1,18 @@
 import geopandas as gpd
 from osgeo import gdal
 import os
+import S3_functions
+
+
 def get_original_resolution(dataset):
     # Assuming the resolution is stored in the GeoTransform (affine transformation parameters)
     x_res = abs(dataset.GetGeoTransform()[1])  # Get pixel width (x resolution)
     y_res = abs(dataset.GetGeoTransform()[5])  # Get pixel height (y resolution)
     return x_res, y_res
+
+
 # Filter raster files based on bounding box intersection
-def get_flood_risk(mask_shp, pilot):
+def get_flood_risk(mask_shp, iso3):
     # Function to check if raster's bounding box intersects with the given bounding box
     def bbox_intersects(bbox1, bbox2):
         return not (bbox1[2] < bbox2[0] or bbox1[0] > bbox2[2] or bbox1[3] < bbox2[1] or bbox1[1] > bbox2[3])
@@ -77,14 +82,18 @@ def get_flood_risk(mask_shp, pilot):
               'dstSRS': 'EPSG:4326'}
 
     print('creating mosaic...')
-    base_path = f'C://Geotar/{pilot}/geodata/processed/floods/'
-    mosaic_path = f'{base_path}flood_risk_{scenario}.tif'
-
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
+    base_path = f'Geotar/{iso3}/geodata/Processed/Floods/'
+    mosaic_path = f'/vsimem/flood_risk_{scenario}.tif'
 
     gdal.Warp(mosaic_path, [ftp_vsi_url + file for file in selected_files], **kwargs)
-    print(f'mosaic saved as:{mosaic_path}')
+
+    key = base_path + f'flood_risk_{scenario}.tif'
+
+    S3_functions.put_tif_to_s3(mosaic_path, key, 'geotar.s3.hq')
+    gdal.Unlink(mosaic_path)
+
+    print(f'mosaic saved as:{key}')
     return
 
-get_flood_risk(f'C:/Geotar/SOM/geodata/Processed/Mask/SOM_mask.shp', 'SOM')
+# get_flood_risk(f's3://geotar.s3.hq/Geotar/LBN/geodata/Processed/Mask/LBN_mask.geojson', 'LBN')
+
