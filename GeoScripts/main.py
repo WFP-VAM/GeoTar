@@ -9,7 +9,8 @@ from process_functions import *
 from get_polygon_data import *
 #from prox_GDAL import *
 import S3_paths
-import Get_flood_risk
+from flood_risk import get_flood_risk
+from compute_proximity import get_travel_time
 
 
 root = pathlib.Path().resolve().parent.parent
@@ -145,7 +146,8 @@ if __name__ =='__main__':
     # process_vector.get_schools()
     # process_vector.get_healthsites()
 
-    # Get_flood_risk.get_flood_risk(mask_shp, pilot_name)
+    # get_flood_risk(mask_shp, pilot_name)
+    # get_travel_time()
 
 
 
