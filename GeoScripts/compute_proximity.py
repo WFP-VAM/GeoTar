@@ -23,9 +23,9 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
     gdf = gpd.clip(gdf, mask)
 
     root = "s3://geotar.s3.hq/"
-
+    dir_s3 = out_name[0].upper() + out_name[1:]
     # clipped shapefile
-    clipped_shape = f"{root}Geotar/{pilot_name}/geodata/Processed/Conflict/{out_name}.geojson"
+    clipped_shape = f"{root}Geotar/{pilot_name}/geodata/Processed/{dir_s3}/{out_name}.geojson"
     # export file
     gdf.to_file(clipped_shape)
 
@@ -42,19 +42,9 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
 
     xmin, xmax, ymin, ymax = shp_layer.GetExtent()
 
-    # check if the output file already exists, and delete it if it does
-    # if os.path.exists(dst_filename):
-    #     print(f'{dst_filename} exists, deleting...')
-    #     drv = gdal.GetDriverByName('GTiff')
-    #     drv.Delete(dst_filename)
-    # else:
-    #     print(f'{dst_filename} not created, starting to write...')
 
-    # rasterize the vectori file with the spatial resolution defined
-    # print()
-    # print('rasterize conflict file')
-    conflict_points = f'/vsis3/geotar.s3.hq/Geotar/{pilot_name}/geodata/Processed/Conflict/{out_name}.geojson'
-    gdal.Rasterize(dst_filename, conflict_points,
+    points = f'/vsis3/geotar.s3.hq/Geotar/{pilot_name}/geodata/Processed/{dir_s3}/{out_name}.geojson'
+    gdal.Rasterize(dst_filename, points,
                    xRes=pixel_size, yRes=pixel_size,
                    burnValues=1, outputBounds=[xmin, ymin, xmax, ymax],
                    outputType=gdal.GDT_Byte, allTouched=True)
@@ -111,9 +101,6 @@ def proximity_rasters(pilot_name: str, input_shp: str, mask_shp: str, out_name: 
     dst_ds = None
     return
 
-import boto3
-from osgeo import gdal, osr
-
 def get_travel_time(iso3:str, bbox:list):
     in_key = 'Geotar/GLOBAL/Geodata/Raw/Travel_time/travel_time_to_cities_11.tif'
     bucket_name = 'geotar.s3.hq'
@@ -153,7 +140,7 @@ def get_travel_time(iso3:str, bbox:list):
     )
 
     # Upload the clipped file to S3
-    out_key = f'Geotar/{iso3}/Geodata/Processed/Travel_time/travel_time_to_cities_11.tif'
+    out_key = f'Geotar/{iso3}/geodata/Processed/Travel_time/travel_time_to_cities_11.tif'
     # Upload the file
     put_tif_to_s3(clipped_tif, out_key, bucket_name, retries=3)
     print(f'travel time uploaded to s3://{bucket_name}/{out_key}')
