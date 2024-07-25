@@ -34,7 +34,7 @@ class get_vectors:
         try:
             # Check if the file exists
             s3.head_object(Bucket='geotar.s3.hq',
-                           Key='Geotar/{self.pilot_name}/geodata/Processed/Roads/{self.pilot_name}_roads.geojson')
+                           Key=f'Geotar/{self.pilot_name}/geodata/Processed/Roads/{self.pilot_name}_roads.geojson')
             print(f"The file '{s3_key}' already exists in the bucket '{bucket_name}'.")
         except exceptions.ClientError as e:
             # If the file does not exist, the process runs
