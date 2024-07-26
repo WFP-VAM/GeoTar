@@ -42,7 +42,7 @@ def storage_structure_s3(bucket_name:str, iso3:str):
         geodata_path = f"{folder}/geodata"
         create_s3_folder(bucket_name, geodata_path)
 
-        subfolders_level_2 = ["Raw", "Processed", "workspace", "arcGIS", "outputs", "Docs"]
+        subfolders_level_2 = ["Raw", "Processed", "Workspace", "ArcGIS", "Outputs", "Docs"]
         for subfolder in subfolders_level_2:
             subfolder_path = f"{geodata_path}/{subfolder}"
             create_s3_folder(bucket_name, subfolder_path)
