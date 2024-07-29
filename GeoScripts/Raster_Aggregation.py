@@ -59,6 +59,7 @@ def aggregate_tiffs_mean(boundary_file, s3_dir, bucket_name):
     for obj in response['Contents']:
         file_key = obj['Key']
         filename = os.path.basename(file_key)
+        base_name = os.path.splitext(filename)[0]
 
         # Check if the file is a GeoTIFF
         if file_key.endswith('.tif'):
@@ -70,7 +71,7 @@ def aggregate_tiffs_mean(boundary_file, s3_dir, bucket_name):
             with MemoryFile(data_bytes) as memfile:
                 with memfile.open() as src:
                     data = src.read(1)
-            rasters[filename] = data
+            rasters[base_name] = data
     # create a list to hold the mean values for each raster
     mean_values = []
 
@@ -139,6 +140,7 @@ def aggregate_floods(boundary_file, s3_dir, bucket_name):
     for obj in response['Contents']:
         file_key = obj['Key']
         filename = os.path.basename(file_key)
+        base_name = os.path.splitext(filename)[0]
 
         # Check if the file is a GeoTIFF
         if file_key.endswith('.tif'):
@@ -150,7 +152,7 @@ def aggregate_floods(boundary_file, s3_dir, bucket_name):
             with MemoryFile(data_bytes) as memfile:
                 with memfile.open() as src:
                     data_floods = src.read(1)
-            rasters_floods[filename] = data_floods
+            rasters_floods[base_name] = data_floods
     # create a list to hold the mean values for each raster
     mean_values = []
 
@@ -237,6 +239,7 @@ def aggregate_nightlights(boundary_file, s3_ntl_dir, bucket_name):
     for obj in response['Contents']:
         file_key = obj['Key']
         filename = os.path.basename(file_key)
+        base_name = os.path.splitext(filename)[0]
 
         # Check if the file is a GeoTIFF
         if file_key.endswith('.tif'):
@@ -248,7 +251,7 @@ def aggregate_nightlights(boundary_file, s3_ntl_dir, bucket_name):
             with MemoryFile(data_bytes) as memfile:
                 with memfile.open() as src:
                     data = src.read(1)
-            rasters[filename] = data
+            rasters[base_name] = data
     # create a list to hold the mean values for each raster
     mean_values = []
 
@@ -298,6 +301,83 @@ def aggregate_nightlights(boundary_file, s3_ntl_dir, bucket_name):
         result_df[name] = raster_mean_values
         multicol_df = pd.concat([multicol_df, result_df], axis=1, join='outer')
     return multicol_df
+def consolidate_results(boundary_file, pilot_name, bucket_name):
+    # output_file = f'Geotar/{pilot}/geodata/Outputs/{pilot_name}_output_file.geojson'
+    output_file = f'{pilot_name}_output_file.geojson'
+    # Load the boundary file as a GeoDataFrame
+    boundaries = gpd.read_file(boundary_file)
+    col_index = select_unique_column_index(boundaries)
+    column_name = boundaries.columns[col_index]
+    print(f'column {column_name} selected')
+    all_results = pd.DataFrame()
+    s3_dirs = [
+        f'Geotar/{pilot_name}/geodata/Processed/Vegetation/season',
+        f'Geotar/{pilot_name}/geodata/Processed/Precipitation/season',
+        f'Geotar/{pilot_name}/geodata/Processed/Temperature/season',
+        f'Geotar/{pilot_name}/geodata/Processed/250m',
+        f'Geotar/{pilot_name}/geodata/Processed/Travel_time'
+    ]
+
+    s3_dirs_floods = [
+        f'Geotar/{pilot_name}/geodata/Processed/Floods'
+    ]
+
+    s3_ntl_dir = [f'Geotar/{pilot_name}/geodata/Processed/NTL']
+
+    for file in s3_dirs:
+        print(f"Processing files in: {file}")
+        result = aggregate_tiffs_mean(boundary_file, file, bucket_name)
+
+        if result is not None:
+            if all_results.empty:
+                all_results = result
+            else:
+                all_results = pd.concat([all_results, result], axis=1, join='outer')
+
+    for file in s3_dirs_floods:
+        print(f"Processing files in: {file}")
+        result1 = aggregate_floods(boundary_file, file, bucket_name)
+
+        if result1 is not None:
+            if all_results.empty:
+                all_results = result1
+            else:
+                all_results = pd.concat([all_results, result1], axis=1, join='outer')
+
+    print(f"Processing files fatalities")
+    fatalities = aggregate_fatalities(boundary_file, pilot_name, column_name)
+    if fatalities is not None:
+        if all_results.empty:
+            all_results = fatalities
+        else:
+            all_results = pd.concat([all_results, fatalities], axis=1, join='outer')
+
+    for file in s3_ntl_dir:
+        print(f"Processing files in: {file}")
+        ntl_result = aggregate_nightlights(boundary_file, file, bucket_name)
+
+        if ntl_result is not None:
+            if all_results.empty:
+                all_results = ntl_result
+            else:
+                all_results = pd.concat([all_results, ntl_result], axis=1, join='outer')
+
+    # Merge the consolidated results with the boundaries GeoDataFrame
+    if not all_results.empty:
+
+        # Combine the results DataFrame with the boundaries GeoDataFrame
+        all_results_gdf = boundaries.join(all_results)
+        all_results_gdf.to_file(f"output_file.geojson")
+        # all_results_gdf.to_file(f"s3://geotar.s3.hq/{output_file}")
+
+        # Also save a CSV without the geometry
+        csv_output_file = os.path.splitext(output_file)[0] + '.csv'
+        csv = all_results_gdf.drop('geometry', axis=1)
+        # csv.to_csv(f"s3://geotar.s3.hq/{csv_output_file}", index=False)
+        csv.to_csv(f"output_file.csv", index=False)
+        print(f"Consolidated results saved to {output_file} and {csv_output_file}")
+    else:
+        print("No data was processed.")
 
 
 
