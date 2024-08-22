@@ -12,14 +12,13 @@ from botocore.config import Config
 from botocore import exceptions
 
 class get_vectors:
-    def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str, root: str):
+    def __init__(self, bbox: List, period: str, pilot_name: str, country_name: str, mask_shp: str):
 
         self.bbox=bbox
         self.period=period
         self.pilot_name=pilot_name
         self.country_name = country_name
         self.mask_shp = mask_shp
-        self.root = root
         #self.hdc_stac_client=hdc_stac_client
         #self.signer=signer
 
