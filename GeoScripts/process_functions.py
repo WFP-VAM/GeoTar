@@ -27,8 +27,8 @@ class Process:
         """
         print("Processing NDVI")
         ndvi = self.hdc_stac_client.search(bbox=self.bbox,
-                                      # collections=["mod13q1_vim_native"],
-                                      collections=["mxd13q1_vim_dekad"],
+                                      collections=["mxd13a2_vim_dekad"],
+                                      # collections=["mxd13q1_vim_dekad"],
                                       datetime=self.period,  # emulates the period of data cube files
                                       ).get_all_items()
 
@@ -115,7 +115,7 @@ class Process:
         #lt_dates = "2002-07-01/2018-07-01"
         query_ndvi_anom = self.hdc_stac_client.search(bbox=self.bbox,
         #collections=["mod13q1_vim_native"],
-        collections=["mxd13q1_viq_dekad"], #mxd13a2_vim_dekad_lta
+        collections=["mxd13a2_viq_dekad"], #mxd13q1_viq_dekad
         datetime=self.period).get_all_items()#1970-01-01T00:00:00Z/1970-12-31T00:00:00Z
         res = 0.0022457882102988 # 250 or 0.01 for 1km
         crs = rasterio.crs.CRS.from_epsg(4326)
@@ -189,7 +189,7 @@ class Process:
         image_max = s_ndvi_anom_max*0.01
         image_max.rio.set_crs(crs)
         output_dir_s = f"C:/Geotar/{self.pilot_name}/geodata/Processed/Vegetation/season"
-        filename_s_max = f'{output_dir_s}/ndvi_a_ma{year}.tif'
+        filename_s_max = f'{output_dir_s}/ndvi_a_ma_{year}.tif'
         if not os.path.exists(output_dir_s):
             os.makedirs(output_dir_s)
 
