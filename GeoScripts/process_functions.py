@@ -471,7 +471,7 @@ class Process:
         print("LST period:", period)
 
         lst_query = self.hdc_stac_client.search(bbox=self.bbox,
-            #collections=['mod13q1_vim_native'],
+            # collections=['mod13q1_vim_native'],
             collections=['myd11a2_txa_dekad'],
             datetime= self.period #'2022-01-01/2022-12-31'
                                         ).get_all_items()
@@ -573,7 +573,7 @@ class Process:
         """
         print("Processing Land surface temperature anomalies")
         lst_anom_query = self.hdc_stac_client.search(bbox=self.bbox,
-            #collections=['mod13q1_vim_native'],
+            # collections=['mod13q1_vim_native'],
             collections=['myd11a2_txd_dekad'],
             datetime= self.period #'2022-01-01/2022-12-31'
                                         ).get_all_items()
